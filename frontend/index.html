@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scout Explorer</title>
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+  <main>
+    <h1>Scout Explorer</h1>
+    <p>Olá! O servidor está no ar. Status da API: <strong id="status">verificando…</strong></p>
+  </main>
+  <script>
+    fetch("/api/saude")
+      .then((r) => r.json())
+      .then((d) => (document.getElementById("status").textContent = d.status))
+      .catch(() => (document.getElementById("status").textContent = "sem resposta"));
+  </script>
+</body>
+</html>
