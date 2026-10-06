@@ -15,6 +15,7 @@ from ..estruturas.avl import ArvoreAVL
 from ..estruturas.avl_aumentada import ArvoreAVLAumentada
 from ..estruturas.lista_mtf import ListaMTF
 from ..estruturas.lista_ordenada import ListaOrdenada
+from ..estruturas.lista_transposicao import ListaTransposicao
 from ..estruturas.lista_ponderada import ListaPonderada
 from ..estruturas.ordenacao import merge_sort
 from ..estruturas.skiplist import SkipList
@@ -67,6 +68,8 @@ class BaseDeDados:
         self.clubes = ArvoreAVL()  # id -> Clube
         self.valores = ListaOrdenada()  # (id do jogador, data) -> valor de mercado
         self.transferencias = ListaOrdenada()  # (id do jogador, data, seq) -> Transferencia
+        # Jogadores frequentes do usuário: transposição (sobe uma posição por visita)
+        self.frequentes = ListaTransposicao()
         self.temporada_atual = None
         self.ligas_ignoradas = []
         self.tempos = []  # (etapa, segundos)
@@ -95,6 +98,25 @@ class BaseDeDados:
             if jogador not in encontrados:  # o mesmo jogador pode casar por mais de um trecho
                 encontrados.append(jogador)
         return merge_sort(encontrados, chave=lambda j: -(j.valor or 0))[:limite]
+
+    def registrar_frequente(self, jogador, limite=10, rastro=None):
+        """Visita a um jogador: se já está na lista, a transposição o adianta
+        uma posição; se não está, entra no fim (saindo o último, se cheia)."""
+        if self.frequentes.buscar(jogador.id, rastro) is not None:
+            return
+        if len(self.frequentes) >= limite:
+            ultimo = self.frequentes.chaves()[-1]
+            self.frequentes.remover(ultimo, rastro)
+        self.frequentes.inserir(jogador.id, jogador, rastro)
+
+    def ranking_na_liga(self, jogador):
+        """Posição do jogador entre os ativos da liga, por valor de mercado."""
+        liga = self.liga(jogador.liga_id) if jogador.ativo and jogador.liga_id else None
+        if liga is None:
+            return None
+        meu_valor = valor_de_mercado(jogador)
+        acima = sum(1 for _, outro in liga.skip if valor_de_mercado(outro) > meu_valor)
+        return {"posicao": acima + 1, "total": liga.jogadores}
 
     def historico(self, jogador_id, rastro=None):
         """Monta a AVL aumentada do histórico de valores de um jogador.

@@ -216,11 +216,16 @@ class SkipListValor(SkipList):
 
     def fatia(self, inicio, quantidade, rastro=None):
         """Até `quantidade` pares a partir da posição `inicio` — uma página."""
+        return [(chave, valor) for chave, valor, _ in self.trecho(inicio, quantidade, rastro)]
+
+    def trecho(self, inicio, quantidade, rastro=None):
+        """Como na versão clássica, mas chega à posição `inicio` pelas
+        larguras em θ(log n), em vez de percorrer o nível 0."""
         if not 1 <= inicio <= self.tamanho:
             return []
         p = self._no_em(inicio, rastro or RASTRO_NULO)
         resultado = []
         while p is not self.sentinela and len(resultado) < quantidade:
-            resultado.append((p.chave, p.valor))
+            resultado.append((p.chave, p.valor, p.nivel))
             p = p.prox[0]
         return resultado

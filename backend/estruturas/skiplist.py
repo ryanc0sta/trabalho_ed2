@@ -140,6 +140,33 @@ class SkipList:
             no = no.prox[nivel]
         return resultado
 
+    def torres(self, nivel_min=0):
+        """Triplas (chave, valor, nível do nó) dos nós presentes em `nivel_min`
+        — a "vista de cima" da lista, usada para desenhá-la."""
+        resultado = []
+        if nivel_min > self.nivel:
+            return resultado
+        no = self.cabeca.prox[nivel_min]
+        while no is not self.sentinela:
+            resultado.append((no.chave, no.valor, no.nivel))
+            no = no.prox[nivel_min]
+        return resultado
+
+    def trecho(self, inicio, quantidade, rastro=None):
+        """Até `quantidade` triplas (chave, valor, nível) a partir da posição
+        `inicio` (1..n). Na versão clássica é preciso percorrer o nível 0
+        desde o começo: θ(inicio)."""
+        r = rastro or RASTRO_NULO
+        no, posicao = self.cabeca.prox[0], 1
+        while no is not self.sentinela and posicao < inicio:
+            no, posicao = no.prox[0], posicao + 1
+        r.registrar("percorre", nos=posicao - 1)
+        resultado = []
+        while no is not self.sentinela and len(resultado) < quantidade:
+            resultado.append((no.chave, no.valor, no.nivel))
+            no = no.prox[0]
+        return resultado
+
     def niveis_dos_nos(self):
         """Pares (chave, nível do nó) no nível 0, em ordem — usado para desenhar."""
         resultado = []

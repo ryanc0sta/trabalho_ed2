@@ -52,3 +52,21 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | `skiplist_valor.py` | `skiplist.py` | Ordem pelo nome, nível pelo ranking de valor (sem moeda) + larguras para posição/paginação |
 | `splay_condicional.py` | `splay.py` | Só afunila depois de K acessos ao mesmo nó |
 | `avl_aumentada.py` | `avl.py` | Cada nó guarda o máximo da subárvore: pico de valor num período em θ(log n) |
+
+## API (backend/api.py)
+
+Com o servidor rodando, http://localhost:8000/docs permite testar cada rota pelo navegador ("Try it out").
+Rotas com `modo` aceitam `modificado` (padrão) ou `classico`. As que executam uma operação devolvem o
+`rastro` (os passos do algoritmo), usado pelas animações.
+
+| Rota | Estrutura |
+|---|---|
+| `GET /api/ligas` · `POST /api/ligas/{id}/acessar` | Lista ponderada / movimentação para o início |
+| `GET /api/ligas/{id}` | Níveis da Skip List e valor mínimo de cada um |
+| `GET /api/ligas/{id}/jogadores?nivel=&pagina=` | Skip List: um nível, paginado (larguras) |
+| `GET /api/ligas/{id}/estrutura` · `GET /api/ligas/{id}/localizar/{jogador}` | Recorte da Skip List para desenhar; descida de uma busca |
+| `GET /api/busca?q=` | Lista ordenada de trechos do nome (autocompletar) |
+| `POST /api/jogadores/{id}/acessar` · `GET /api/em-alta` | Splay condicional / clássica (recorte antes e depois) |
+| `GET /api/frequentes` | Lista com transposição |
+| `GET /api/jogadores/{id}` · `/valor?data=` · `/pico?de=&ate=` | AVL aumentada do histórico |
+| `GET /api/clubes/{id}` | AVL de clubes |
