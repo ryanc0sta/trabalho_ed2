@@ -79,7 +79,8 @@ def nos_skip(triplas, posicao_inicial=None):
     """Triplas (chave, Jogador, nível) -> nós para desenhar as torres."""
     nos = []
     for i, (chave, jogador, nivel) in enumerate(triplas):
-        item = {"id": rotulo(chave), "nivel": nivel, **jogador.resumo()}
+        # "no" identifica o nó no rastro; "id" é o id do jogador.
+        item = {**jogador.resumo(), "no": rotulo(chave), "nivel": nivel}
         if posicao_inicial is not None:
             item["posicao"] = posicao_inicial + i
         nos.append(item)

@@ -94,6 +94,11 @@ def test_jogadores_e_temporada(base):
     assert base.jogador(6).valor is None
 
 
+def test_aquecimento_coloca_o_mais_valioso_na_raiz(base):
+    assert base.busca.raiz.valor.id == 1 and base.busca_classica.raiz.valor.id == 1
+    assert base.busca.raiz.contador == 0  # contador zerado após afunilar
+
+
 def test_ligas_so_com_ativos_e_ordem_por_valor(base):
     assert base.ligas.chaves() == ["GB1", "IT1"]  # GB1 vale mais
     assert base.ligas_classica.chaves() == ["GB1", "IT1"]

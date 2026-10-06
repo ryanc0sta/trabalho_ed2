@@ -25,6 +25,7 @@ from ..estruturas.splay_condicional import ArvoreAfuniladaCondicional
 from .modelos import Clube, Jogador, Liga, Transferencia, normalizar
 
 PASTA_DADOS = Path(__file__).resolve().parents[2] / "dados"
+QUANTOS_AQUECER = 15  # jogadores mais valiosos já "em alta" quando o servidor sobe
 
 
 def valor_de_mercado(jogador):
@@ -293,6 +294,16 @@ def _montar_busca(base, pasta):
     pares = merge_sort([(j.chave, j) for _, j in base.jogadores], chave=lambda par: par[0])
     base.busca.construir_de_ordenados(pares)
     base.busca_classica.construir_de_ordenados(pares)
+
+    # Aquecimento: a árvore balanceada por nome não diz nada sobre
+    # popularidade. Os mais valiosos são acessados como se tivessem sido
+    # procurados (K vezes na condicional), do menos para o mais valioso, para
+    # que "Em alta" comece com eles e o mais valioso fique na raiz.
+    ativos = [j for _, j in base.jogadores if j.ativo]
+    for jogador in reversed(merge_sort(ativos, chave=lambda j: -valor_de_mercado(j))[:QUANTOS_AQUECER]):
+        for _ in range(base.busca.limite):
+            base.busca.buscar(jogador.chave)
+        base.busca_classica.buscar(jogador.chave)
 
     # Índice do autocompletar: o nome a partir de cada palavra
     # ("erling haaland" e "haaland"), para achar também pelo sobrenome.

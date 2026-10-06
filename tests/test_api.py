@@ -56,7 +56,8 @@ def test_liga_niveis_e_jogadores(cliente):
 def test_estrutura_e_localizar(cliente):
     estrutura = cliente.get("/api/ligas/GB1/estrutura").json()
     assert estrutura["total"] == 3 and len(estrutura["nos"]) == 3
-    assert {"id", "nivel", "nome", "foto", "posicao"} <= set(estrutura["nos"][0])
+    assert {"id", "no", "nivel", "nome", "foto", "posicao"} <= set(estrutura["nos"][0])
+    assert estrutura["nos"][0]["no"] == "bukayo saka|2" and estrutura["nos"][0]["id"] == 2
     de_cima = cliente.get("/api/ligas/GB1/estrutura?nivel_min=1").json()
     assert [n["nome"] for n in de_cima["nos"]] == ["Erling Haaland"]
 

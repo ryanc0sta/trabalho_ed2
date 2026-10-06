@@ -18,6 +18,18 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 4. Testes: `.venv/bin/pytest` (não precisam da base real)
 5. Só a carga, com resumo e tempos: `.venv/bin/python -m backend.dados.carregar`
 
+## Telas (frontend)
+
+| Página | O que mostra |
+|---|---|
+| `index.html` | Ligas (lista autoorganizável), "Em alta" (topo da árvore afunilada), frequentes (transposição) |
+| `liga.html?id=GB1` | Slider de profundidade sobre os níveis da Skip List, cards paginados |
+| `jogador.html?id=418560` | Ficha, gráfico do histórico, valor numa data (piso) e pico no período (AVL aumentada), transferências |
+| `clube.html?id=281` | Ficha e elenco |
+
+O seletor **Modificado / Clássico** no topo troca a versão das estruturas, e o botão
+**Por dentro da estrutura** lista os passos de cada operação feita.
+
 ## Dados usados (backend/dados)
 
 | Estrutura | Conteúdo |
