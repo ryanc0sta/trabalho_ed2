@@ -6,7 +6,7 @@ cliente = TestClient(app)
 
 
 def test_saude():
-    assert cliente.get("/api/saude").json() == {"status": "ok"}
+    assert cliente.get("/api/saude").json()["status"] == "ok"
 
 
 def test_frontend_servido():

@@ -44,6 +44,16 @@ class ListaEncadeada:
         r.registrar("nao_encontrado", chave=rotulo(chave))
         return None
 
+    def consultar(self, chave):
+        """Busca sequencial que nunca reorganiza a lista — para leituras
+        internas que não devem contar como acesso do usuário."""
+        atual = self.cabeca
+        while atual is not None:
+            if atual.chave == chave:
+                return atual.valor
+            atual = atual.prox
+        return None
+
     def _reorganizar(self, ante_anterior, anterior, atual, posicao, rastro):
         """Busca sequencial simples: não altera a lista."""
 

@@ -14,7 +14,20 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
    ```bash
    .venv/bin/uvicorn backend.api:app --reload
    ```
-4. Testes: `.venv/bin/pytest`
+   Na subida, o servidor carrega a base nas estruturas (~10 s) e mostra um resumo no terminal.
+4. Testes: `.venv/bin/pytest` (não precisam da base real)
+5. Só a carga, com resumo e tempos: `.venv/bin/python -m backend.dados.carregar`
+
+## Dados usados (backend/dados)
+
+| Estrutura | Conteúdo |
+|---|---|
+| `ListaPonderada` / `ListaMTF` | 31 ligas nacionais (modificada / clássica) |
+| `SkipListValor` / `SkipList` por liga | Jogadores **ativos** (temporada mais recente) da liga |
+| `ArvoreAfuniladaCondicional` / `ArvoreAfunilada` | Todos os ~50 mil jogadores, chave (nome normalizado, id) |
+| `ListaOrdenada` | Jogadores por id; trechos do nome (autocompletar); histórico de valores; transferências |
+| `ArvoreAVL` | Clubes por id |
+| `ArvoreAVLAumentada` | Histórico de um jogador, montado sob demanda ao abrir a página dele |
 
 ## Estruturas (backend/estruturas)
 

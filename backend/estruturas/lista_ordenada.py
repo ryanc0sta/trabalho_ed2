@@ -73,11 +73,13 @@ class ListaOrdenada:
             return None
         return self.chaves[i - 1], self.valores[i - 1]
 
-    def intervalo(self, de, ate, rastro=None):
-        """Busca de intervalo: todos os pares com de <= chave <= ate."""
+    def intervalo(self, de, ate, rastro=None, limite=None):
+        """Busca de intervalo: os pares com de <= chave <= ate (no máximo
+        `limite`, se informado)."""
         i = self._indice_teto(de, rastro or RASTRO_NULO)
         resultado = []
-        while i < len(self.chaves) and self.chaves[i] <= ate:
+        while (i < len(self.chaves) and self.chaves[i] <= ate
+               and (limite is None or len(resultado) < limite)):
             resultado.append((self.chaves[i], self.valores[i]))
             i += 1
         return resultado

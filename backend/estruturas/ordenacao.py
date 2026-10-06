@@ -7,40 +7,48 @@ em vez de θ(n²) com inserções sucessivas.
 
 
 def merge_sort(elementos, chave=lambda x: x):
-    """Retorna uma nova lista ordenada (estável) segundo `chave(elemento)`."""
+    """Retorna uma nova lista ordenada (estável) segundo `chave(elemento)`.
+
+    Versão ascendente (iterativa): intercala blocos de tamanho 1, 2, 4, ...
+    As chaves são calculadas uma única vez e ordenadas junto com os elementos
+    (dois arrays paralelos), em vez de recalculadas a cada comparação.
+    """
     n = len(elementos)
     if n <= 1:
         return list(elementos)
-    # Versão ascendente (iterativa): intercala blocos de tamanho 1, 2, 4, ...
-    origem = list(elementos)
-    destino = [None] * n
+    chaves, itens = [chave(e) for e in elementos], list(elementos)
+    chaves_dest, itens_dest = [None] * n, [None] * n
     largura = 1
     while largura < n:
         for inicio in range(0, n, 2 * largura):
             meio = min(inicio + largura, n)
             fim = min(inicio + 2 * largura, n)
-            _intercalar(origem, destino, inicio, meio, fim, chave)
-        origem, destino = destino, origem
+            _intercalar(chaves, itens, chaves_dest, itens_dest, inicio, meio, fim)
+        chaves, chaves_dest = chaves_dest, chaves
+        itens, itens_dest = itens_dest, itens
         largura *= 2
-    return origem
+    return itens
 
 
-def _intercalar(origem, destino, inicio, meio, fim, chave):
+def _intercalar(chaves, itens, chaves_dest, itens_dest, inicio, meio, fim):
+    if meio >= fim or chaves[meio - 1] <= chaves[meio]:
+        # Os dois blocos já estão em ordem entre si: basta copiar.
+        chaves_dest[inicio:fim] = chaves[inicio:fim]
+        itens_dest[inicio:fim] = itens[inicio:fim]
+        return
     i, j, k = inicio, meio, inicio
     while i < meio and j < fim:
         # <= mantém a ordem relativa de chaves iguais (estabilidade)
-        if chave(origem[i]) <= chave(origem[j]):
-            destino[k] = origem[i]
+        if chaves[i] <= chaves[j]:
+            chaves_dest[k], itens_dest[k] = chaves[i], itens[i]
             i += 1
         else:
-            destino[k] = origem[j]
+            chaves_dest[k], itens_dest[k] = chaves[j], itens[j]
             j += 1
         k += 1
-    while i < meio:
-        destino[k] = origem[i]
-        i += 1
-        k += 1
-    while j < fim:
-        destino[k] = origem[j]
-        j += 1
-        k += 1
+    if i < meio:
+        chaves_dest[k:fim] = chaves[i:meio]
+        itens_dest[k:fim] = itens[i:meio]
+    else:
+        chaves_dest[k:fim] = chaves[j:fim]
+        itens_dest[k:fim] = itens[j:fim]
