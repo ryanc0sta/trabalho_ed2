@@ -1,6 +1,7 @@
-// Página do jogador. Abrir a página conta como acesso na árvore afunilada
-// (busca) e na lista de frequentes. O histórico de valores vem de uma AVL
-// aumentada: valor numa data (busca de piso) e pico num período.
+// Página do jogador. Abrir a página conta como acesso na árvore de busca e
+// nos "vistos por você". O histórico vem de uma AVL aumentada:
+//   - clicar no gráfico = valor naquela data (busca de piso);
+//   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
 
 import { api, modoAtual } from "./api.js";
 import {
@@ -14,193 +15,164 @@ const jogadorId = parametro("id");
 const elJogador = document.getElementById("jogador");
 let dados = null;
 let grafico = null;
+let destaque = null; // {data, valor} marcado no gráfico
 
-const dataParaTempo = (iso) => new Date(iso + "T00:00:00").getTime();
+const paraTempo = (iso) => new Date(iso + "T00:00:00").getTime();
+const paraIso = (tempo) => new Date(tempo).toISOString().slice(0, 10);
 
-function chip(rotulo, valor) {
-  return valor === null || valor === undefined || valor === "" || valor === "—"
-    ? "" : `<span class="chip">${esc(rotulo)} <b>${esc(valor)}</b></span>`;
+function fato(rotulo, valor) {
+  return valor ? `<div><dt>${esc(rotulo)}</dt><dd>${esc(valor)}</dd></div>` : "";
 }
 
 function renderizar() {
   const j = dados.jogador;
   document.title = `${j.nome} · Scout Explorer`;
-  const anos = idade(j.nascimento);
   const historico = dados.historico;
   const primeira = historico[0]?.data;
   const ultima = historico[historico.length - 1]?.data;
+  const anos = idade(j.nascimento);
+  const ranking = dados.ranking_liga;
 
   elJogador.innerHTML = `
-    <section class="jogador-heroi">
+    <section class="perfil">
       ${fotoHTML(j.foto, j.nome, "retrato")}
       <div>
-        <span class="etiqueta-estrutura">${j.ativo ? `${esc(traduzirPosicao(j.sub_posicao || j.posicao))}` : `Inativo desde ${j.ultima_temporada}`}</span>
-        <h1 style="margin-top:10px">${esc(j.nome)}</h1>
-        <div class="clube">
+        <h1>${esc(j.nome)}</h1>
+        <div class="vinculo">
           ${dados.clube ? `<img src="${esc(dados.clube.escudo)}" alt="" referrerpolicy="no-referrer">
-            <a href="clube.html?id=${dados.clube.id}">${esc(dados.clube.nome)}</a>` : ""}
-          ${dados.liga ? `<span>·</span><a href="liga.html?id=${encodeURIComponent(dados.liga.id)}">${esc(dados.liga.nome)}</a>` : ""}
+            <a class="link" href="clube.html?id=${dados.clube.id}">${esc(dados.clube.nome)}</a>` : ""}
+          ${dados.liga ? `<span aria-hidden="true">·</span><a class="link" href="liga.html?id=${encodeURIComponent(dados.liga.id)}">${esc(dados.liga.nome)}</a>` : ""}
+          ${j.ativo ? "" : `<span>· inativo desde ${j.ultima_temporada}</span>`}
         </div>
-        <div class="valor-grande" id="valor-atual">€0</div>
-        <div class="chips">
-          ${dados.ranking_liga ? `<span class="chip">Ranking na liga <b>#${dados.ranking_liga.posicao}</b> de ${dados.ranking_liga.total}</span>` : ""}
-          ${chip("Valor máximo", formatarValor(j.valor_maximo))}
-          ${chip("Idade", anos !== null ? `${anos} anos` : null)}
-          ${chip("Altura", j.altura ? `${(j.altura / 100).toFixed(2).replace(".", ",")} m` : null)}
-          ${chip("Pé", traduzirPe(j.pe))}
-          ${chip("Nacionalidade", j.cidadania)}
-          ${chip("Nascido em", j.pais_nascimento)}
-          ${chip("Contrato até", j.contrato ? formatarData(j.contrato) : null)}
-          ${chip("Seleção", j.jogos_selecao ? `${j.jogos_selecao} jogos, ${j.gols_selecao ?? 0} gols` : null)}
-          ${chip("Agente", j.agente)}
+        <div class="valor-atual"><span id="valor-atual">€0</span>
+          <small>${ranking ? `${ranking.posicao}º mais valioso de ${ranking.total} na liga` : "valor de mercado"}</small>
         </div>
+        <dl class="fatos">
+          ${fato("Posição", traduzirPosicao(j.sub_posicao || j.posicao))}
+          ${fato("Idade", anos !== null ? `${anos} anos` : null)}
+          ${fato("Nacionalidade", j.cidadania)}
+          ${fato("Altura", j.altura ? `${(j.altura / 100).toFixed(2).replace(".", ",")} m` : null)}
+          ${fato("Pé", traduzirPe(j.pe) === "—" ? null : traduzirPe(j.pe))}
+          ${fato("Contrato até", j.contrato ? formatarData(j.contrato) : null)}
+        </dl>
       </div>
     </section>
 
-    <div class="duas-colunas secao">
-      <section class="painel">
-        <div class="secao-titulo"><h2>Valor de mercado</h2><span class="etiqueta-estrutura">AVL aumentada · ${historico.length} nós</span></div>
-        ${historico.length
-          ? `<div class="grafico-caixa"><canvas id="grafico" aria-label="Histórico do valor de mercado"></canvas></div>`
-          : `<p class="vazio">Sem histórico de valores para este jogador.</p>`}
-      </section>
+    <section class="secao">
+      <div class="secao-titulo"><h2>Valor de mercado</h2></div>
+      ${historico.length ? `
+        <form class="consulta" id="form-pico">
+          <label>De<input type="date" id="pico-de" value="${esc(primeira)}" min="${esc(primeira)}" max="${esc(ultima)}" required></label>
+          <label>Até<input type="date" id="pico-ate" value="${esc(ultima)}" min="${esc(primeira)}" max="${esc(ultima)}" required></label>
+          <button class="botao principal">Ver pico</button>
+        </form>
+        <div class="grafico"><canvas id="grafico" aria-label="Histórico do valor de mercado" role="img"></canvas></div>
+        <p class="leitura" id="leitura" aria-live="polite">Clique no gráfico para ver o valor em qualquer data.</p>`
+        : `<p class="vazio">Sem histórico de valores.</p>`}
+    </section>
 
-      <section class="ferramentas">
-        <div class="painel ferramenta">
-          <h3>Quanto valia em… <span class="etiqueta-estrutura">Busca de piso</span></h3>
-          <form class="linha-form" id="form-valor">
-            <input type="date" id="data-valor" value="${esc(primeira ? meioDoHistorico(primeira, ultima) : "")}" required>
-            <button class="botao primario" ${historico.length ? "" : "disabled"}>Consultar</button>
-          </form>
-          <div class="resposta" id="resposta-valor"></div>
-        </div>
-        <div class="painel ferramenta">
-          <h3>Pico no período <span class="etiqueta-estrutura">${modoAtual() === "modificado" ? "Máximo da subárvore" : "Percurso em ordem"}</span></h3>
-          <form class="linha-form" id="form-pico">
-            <input type="date" id="pico-de" value="${esc(primeira || "")}" required>
-            <span class="mudo">até</span>
-            <input type="date" id="pico-ate" value="${esc(ultima || "")}" required>
-            <button class="botao primario" ${historico.length ? "" : "disabled"}>Calcular</button>
-          </form>
-          <div class="resposta" id="resposta-pico"></div>
-        </div>
-      </section>
-    </div>
-
-    <section class="secao painel">
-      <div class="secao-titulo"><h2>Transferências</h2><span class="etiqueta-estrutura">Lista ordenada · intervalo do jogador</span></div>
-      ${dados.transferencias.length
-        ? `<ol class="linha-tempo">${[...dados.transferencias].reverse().map((t) => `
-            <li>
-              <div class="data">${formatarData(t.data)} · temporada ${esc(t.temporada)}</div>
-              <div class="clubes">${clubeLink(t.de_clube_id, t.de_clube)}<span class="seta">→</span>${clubeLink(t.para_clube_id, t.para_clube)}</div>
-              <div class="pequeno mudo">Taxa ${t.taxa ? `<span class="valor">${formatarValor(t.taxa)}</span>` : "não informada / livre"}
-                ${t.valor_mercado ? ` · valor de mercado na época ${formatarValor(t.valor_mercado)}` : ""}</div>
-            </li>`).join("")}</ol>`
+    <section class="secao">
+      <div class="secao-titulo"><h2>Transferências</h2></div>
+      ${dados.transferencias.length ? `
+        <table class="transferencias">
+          <thead><tr><th>Data</th><th>Saída</th><th>Chegada</th><th>Taxa</th></tr></thead>
+          <tbody>${[...dados.transferencias].reverse().map((t) => `
+            <tr>
+              <td class="num">${formatarData(t.data)}</td>
+              <td>${clubeLink(t.de_clube_id, t.de_clube)}</td>
+              <td>${clubeLink(t.para_clube_id, t.para_clube)}</td>
+              <td class="num">${t.taxa ? formatarValor(t.taxa) : "—"}</td>
+            </tr>`).join("")}</tbody>
+        </table>`
         : `<p class="vazio">Nenhuma transferência registrada.</p>`}
     </section>`;
 
   animarNumero(document.getElementById("valor-atual"), j.valor);
-  if (historico.length) desenharGrafico();
-  document.getElementById("form-valor").addEventListener("submit", consultarValor);
-  document.getElementById("form-pico").addEventListener("submit", calcularPico);
+  if (historico.length) {
+    desenharGrafico();
+    document.getElementById("form-pico").addEventListener("submit", calcularPico);
+  }
 }
 
 function clubeLink(id, nome) {
-  return id ? `<a href="clube.html?id=${id}">${esc(nome)}</a>` : esc(nome || "—");
-}
-
-function meioDoHistorico(de, ate) {
-  const meio = new Date((dataParaTempo(de) + dataParaTempo(ate)) / 2);
-  return meio.toISOString().slice(0, 10);
+  return id ? `<a class="link" href="clube.html?id=${id}">${esc(nome)}</a>` : esc(nome || "—");
 }
 
 // ------------------------------------------------------------------ gráfico
+function cor(nome) {
+  return getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
+}
+
 function desenharGrafico() {
-  const pontos = dados.historico.map((h) => ({ x: dataParaTempo(h.data), y: h.valor, data: h.data }));
-  const estilo = getComputedStyle(document.documentElement);
-  const cor = (nome) => estilo.getPropertyValue(nome).trim();
+  grafico?.destroy();
+  const pontos = dados.historico.map((h) => ({ x: paraTempo(h.data), y: h.valor, data: h.data }));
   grafico = new Chart(document.getElementById("grafico"), {
     type: "line",
     data: {
       datasets: [
         {
-          label: "Valor de mercado",
-          data: pontos,
-          stepped: "before",
-          borderColor: cor("--verde"),
-          backgroundColor: "rgba(52, 211, 153, 0.12)",
-          fill: true,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          borderWidth: 2.5,
+          data: pontos, stepped: "before", borderColor: cor("--tinta"), borderWidth: 2,
+          pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: cor("--tinta"),
         },
         {
-          label: "Destaque",
-          data: [],
-          pointRadius: 9,
-          pointHoverRadius: 10,
-          pointBackgroundColor: cor("--ouro"),
-          pointBorderColor: "#fff",
-          pointBorderWidth: 2,
-          showLine: false,
+          data: destaque ? [{ x: paraTempo(destaque.data), y: destaque.valor, data: destaque.data }] : [],
+          showLine: false, pointRadius: 7, pointHoverRadius: 7,
+          pointBackgroundColor: cor("--acao"), pointBorderColor: cor("--fundo"), pointBorderWidth: 2,
         },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 1200, easing: "easeOutQuart" },
-      interaction: { mode: "nearest", intersect: false },
+      animation: { duration: 600 },
+      interaction: { mode: "index", intersect: false },
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: {
-            title: (itens) => formatarData(itens[0].raw.data),
-            label: (item) => ` ${formatarValor(item.raw.y)}`,
-          },
+          backgroundColor: cor("--tinta"), titleColor: cor("--fundo"), bodyColor: cor("--fundo"),
+          displayColors: false, cornerRadius: 8, padding: 8,
+          titleFont: { family: "IBM Plex Mono" }, bodyFont: { family: "IBM Plex Mono" },
+          filter: (item) => item.datasetIndex === 0,
+          callbacks: { title: (i) => formatarData(i[0].raw.data), label: (i) => formatarValor(i.raw.y) },
         },
       },
       scales: {
         x: {
-          type: "linear",
-          ticks: { color: cor("--texto-3"), callback: (v) => new Date(v).getFullYear(), maxTicksLimit: 8 },
-          grid: { color: "rgba(255,255,255,0.04)" },
+          type: "linear", border: { color: cor("--borda") }, grid: { display: false },
+          ticks: { color: cor("--tinta-2"), font: { family: "IBM Plex Mono", size: 12 },
+            callback: (v) => new Date(v).getFullYear(), maxTicksLimit: 8 },
         },
         y: {
-          ticks: { color: cor("--texto-3"), callback: (v) => formatarValor(v) },
-          grid: { color: "rgba(255,255,255,0.06)" },
+          border: { display: false }, grid: { color: cor("--borda") },
+          ticks: { color: cor("--tinta-2"), font: { family: "IBM Plex Mono", size: 12 },
+            callback: (v) => formatarValor(v), maxTicksLimit: 6 },
         },
       },
+      onClick: (evento, _itens, chart) => consultarValor(paraIso(chart.scales.x.getValueForPixel(evento.x))),
     },
   });
 }
 
-function destacarNoGrafico(data, valor) {
+function marcar(data, valor) {
+  destaque = data ? { data, valor } : null;
   if (!grafico) return;
-  grafico.data.datasets[1].data = data ? [{ x: dataParaTempo(data), y: valor, data }] : [];
+  grafico.data.datasets[1].data = destaque ? [{ x: paraTempo(data), y: valor, data }] : [];
   grafico.update();
 }
 
-// ------------------------------------------------------------- ferramentas
-async function consultarValor(evento) {
-  evento.preventDefault();
-  const data = document.getElementById("data-valor").value;
-  const alvo = document.getElementById("resposta-valor");
+// ------------------------------------------------------------- consultas
+async function consultarValor(data) {
+  const leitura = document.getElementById("leitura");
   try {
     const resposta = await api.valorEm(jogadorId, data);
     const r = resposta.resultado;
-    alvo.innerHTML = r
-      ? `<span class="valor">${formatarValor(r.valor)}</span> <span class="mudo">— avaliação de ${formatarData(r.data)}, a mais recente até ${formatarData(data)}</span>`
-      : `<span class="mudo">Não há avaliação até ${formatarData(data)}.</span>`;
-    destacarNoGrafico(r?.data, r?.valor);
-    registrarOperacao({
-      titulo: `Valor em ${formatarData(data)}`,
-      estrutura: "AVL · busca de piso",
-      rastro: resposta.rastro,
-    });
+    leitura.innerHTML = r
+      ? `Em ${formatarData(data)}: <b>${formatarValor(r.valor)}</b> (avaliação de ${formatarData(r.data)})`
+      : `Sem avaliação até ${formatarData(data)}.`;
+    marcar(r?.data, r?.valor);
+    registrarOperacao({ titulo: `Valor em ${formatarData(data)}`, estrutura: "AVL · busca de piso", rastro: resposta.rastro });
   } catch (erro) {
-    alvo.innerHTML = `<span class="aviso">${esc(erro.message)}</span>`;
+    leitura.textContent = erro.message;
   }
 }
 
@@ -208,49 +180,49 @@ async function calcularPico(evento) {
   evento.preventDefault();
   const de = document.getElementById("pico-de").value;
   const ate = document.getElementById("pico-ate").value;
-  const alvo = document.getElementById("resposta-pico");
+  const leitura = document.getElementById("leitura");
   if (de > ate) {
-    alvo.innerHTML = `<span class="mudo">A data inicial deve ser anterior à final.</span>`;
+    leitura.textContent = "A data inicial deve vir antes da final.";
     return;
   }
   try {
     const resposta = await api.pico(jogadorId, de, ate);
     const r = resposta.resultado;
-    alvo.innerHTML = r
-      ? `<span class="valor">${formatarValor(r.valor)}</span> <span class="mudo">em ${formatarData(r.data)} · ${resposta.rastro.comparacoes} comparações</span>`
-      : `<span class="mudo">Nenhuma avaliação no período.</span>`;
-    destacarNoGrafico(r?.data, r?.valor);
+    leitura.innerHTML = r
+      ? `Pico entre ${formatarData(de)} e ${formatarData(ate)}: <b>${formatarValor(r.valor)}</b> em ${formatarData(r.data)}`
+      : "Nenhuma avaliação no período.";
+    marcar(r?.data, r?.valor);
     registrarOperacao({
       titulo: `Pico entre ${formatarData(de)} e ${formatarData(ate)}`,
       estrutura: modoAtual() === "modificado" ? "AVL aumentada · máximo da subárvore" : "AVL · percurso em ordem",
       rastro: resposta.rastro,
     });
   } catch (erro) {
-    alvo.innerHTML = `<span class="aviso">${esc(erro.message)}</span>`;
+    leitura.textContent = erro.message;
   }
 }
 
 // ------------------------------------------------------------------ início
 async function iniciar() {
   if (!jogadorId) {
-    elJogador.innerHTML = `<div class="aviso">Jogador não informado.</div>`;
+    elJogador.innerHTML = `<p class="aviso">Jogador não informado.</p>`;
     return;
   }
   elJogador.innerHTML = `<div class="esqueleto" style="height:300px"></div>`;
   try {
-    // Abrir a página = acessar o jogador na árvore afunilada (e nos frequentes).
+    // Abrir a página = acessar o jogador na árvore de busca (e nos vistos).
     const [acesso, detalhe] = await Promise.all([api.acessarJogador(jogadorId), api.jogador(jogadorId)]);
     dados = detalhe;
     renderizar();
-    const acessoPasso = acesso.rastro.passos.find((p) => p.passo === "acesso");
+    const passoAcesso = acesso.rastro.passos.find((p) => p.passo === "acesso");
     const rotacoes = acesso.rastro.passos.filter((p) => p.passo === "rotacao").length;
     registrarOperacao({
-      titulo: `Abrir ${dados.jogador.nome}`,
+      titulo: `Visita a ${dados.jogador.nome}`,
       estrutura: modoAtual() === "modificado" ? "Árvore afunilada condicional" : "Árvore afunilada",
       rastro: acesso.rastro,
       resumo: [
-        acessoPasso ? `acesso ${acessoPasso.contador || acessoPasso.limite} de ${acessoPasso.limite}` : null,
-        rotacoes ? `${rotacoes} rotações — virou a raiz` : "sem rotações",
+        passoAcesso ? `acesso ${passoAcesso.contador} de ${passoAcesso.limite}` : null,
+        rotacoes ? `${rotacoes} rotações até a raiz` : "sem rotações",
       ].filter(Boolean),
     });
     registrarOperacao({
@@ -258,12 +230,11 @@ async function iniciar() {
       estrutura: "AVL aumentada · inserções em ordem",
       rastro: dados.rastro_montagem,
       resumo: [`${dados.rastro_montagem.passos.filter((p) => p.passo === "rotacao").length} rotações`],
-      silencioso: true,
     });
   } catch (erro) {
     mostrarErro(elJogador, erro);
   }
 }
 
-window.addEventListener("modo", () => { if (dados) renderizar(); });
+window.addEventListener("tema", () => { if (dados?.historico.length) desenharGrafico(); });
 iniciar();

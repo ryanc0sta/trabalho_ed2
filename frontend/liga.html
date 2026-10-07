@@ -3,21 +3,22 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Liga · Scout Explorer</title>
+  <script>try { const t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/estilo.css">
-  <title>Liga · Scout Explorer</title>
 </head>
 <body>
   <header id="topo"></header>
-  <main class="container pagina-entrar" id="conteudo">
+  <main class="container">
     <div id="cabecalho"></div>
-    <section class="explorar painel" id="explorar"></section>
-    <section class="secao">
-      <div class="grade-cards" id="jogadores"></div>
-      <div class="paginacao" id="paginacao"></div>
+    <section class="filtro oculto" id="filtro"></section>
+    <section class="secao" style="margin-top:var(--e4)">
+      <div class="grade" id="jogadores"></div>
+      <nav class="paginacao" id="paginacao" aria-label="Páginas"></nav>
     </section>
   </main>
   <script type="module" src="js/liga.js"></script>

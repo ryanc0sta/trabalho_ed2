@@ -10,9 +10,9 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
    python3 -m venv .venv
    .venv/bin/pip install -r requirements.txt
    ```
-3. Suba o servidor e abra http://localhost:8000:
+3. Suba o servidor e abra http://localhost:8001:
    ```bash
-   .venv/bin/uvicorn backend.api:app --reload
+   .venv/bin/uvicorn backend.api:app --reload --port 8001
    ```
    Na subida, o servidor carrega a base nas estruturas (~10 s) e mostra um resumo no terminal.
 4. Testes: `.venv/bin/pytest` (não precisam da base real)
@@ -27,8 +27,8 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | `jogador.html?id=418560` | Ficha, gráfico do histórico, valor numa data (piso) e pico no período (AVL aumentada), transferências |
 | `clube.html?id=281` | Ficha e elenco |
 
-O seletor **Modificado / Clássico** no topo troca a versão das estruturas, e o botão
-**Por dentro da estrutura** lista os passos de cada operação feita.
+O painel **Bastidores** (botão no topo) mostra os passos de cada operação e permite trocar
+entre a versão modificada e a clássica das estruturas.
 
 ## Dados usados (backend/dados)
 
@@ -67,7 +67,7 @@ O seletor **Modificado / Clássico** no topo troca a versão das estruturas, e o
 
 ## API (backend/api.py)
 
-Com o servidor rodando, http://localhost:8000/docs permite testar cada rota pelo navegador ("Try it out").
+Com o servidor rodando, http://localhost:8001/docs permite testar cada rota pelo navegador ("Try it out").
 Rotas com `modo` aceitam `modificado` (padrão) ou `classico`. As que executam uma operação devolvem o
 `rastro` (os passos do algoritmo), usado pelas animações.
 

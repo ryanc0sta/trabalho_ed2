@@ -3,38 +3,38 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scout Explorer</title>
+  <script>try { const t = localStorage.getItem("tema"); if (t) document.documentElement.dataset.tema = t; } catch {}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/estilo.css">
-  <title>Scout Explorer</title>
 </head>
 <body>
   <header id="topo"></header>
-  <main class="container pagina-entrar" id="conteudo">
-    <section class="heroi">
-      <h1>Explore o futebol pelas <em>estruturas de dados</em>.</h1>
-      <p>Mais de 50 mil jogadores da base Transfermarkt organizados em listas com saltos, árvores afuniladas, AVL e listas autoorganizáveis. Abra o painel “Por dentro da estrutura” para ver o que cada uma faz.</p>
+  <main class="container">
+    <section class="abertura">
+      <h1>Encontre qualquer jogador.</h1>
+      <p>50 mil atletas de 31 ligas, com valor de mercado e histórico.</p>
+      <div id="busca-principal"></div>
     </section>
 
-    <section class="secao" id="secao-frequentes">
-      <div class="secao-titulo"><h2>Seus frequentes</h2><span class="etiqueta-estrutura">Lista com transposição</span></div>
+    <section class="secao oculto" id="secao-frequentes">
+      <div class="secao-titulo"><h2>Vistos por você</h2></div>
       <div class="frequentes" id="frequentes"></div>
     </section>
 
-    <div class="inicio-grade secao">
-      <section>
-        <div class="secao-titulo"><h2>Ligas</h2><span class="etiqueta-estrutura" id="etiqueta-ligas"></span></div>
-        <p class="mudo pequeno" id="explica-ligas" style="margin:-6px 0 12px"></p>
-        <div class="ligas" id="ligas"></div>
-      </section>
-      <section>
-        <div class="secao-titulo"><h2>Em alta</h2><span class="etiqueta-estrutura" id="etiqueta-alta"></span></div>
-        <p class="mudo pequeno" style="margin:-6px 0 12px">Os jogadores nos três primeiros níveis da árvore de busca — quem foi procurado com frequência sobe até lá.</p>
-        <div class="grade-cards" id="em-alta"></div>
-      </section>
-    </div>
+    <section class="secao">
+      <div class="secao-titulo"><h2>Em alta</h2></div>
+      <div class="carrossel" id="em-alta"></div>
+    </section>
+
+    <section class="secao">
+      <div class="secao-titulo"><h2>Ligas</h2><span class="meta">Mais visitadas primeiro</span></div>
+      <div class="ligas recolhidas" id="ligas"></div>
+      <button class="ver-todas link" id="ver-todas">Ver todas as ligas</button>
+    </section>
   </main>
   <script type="module" src="js/inicio.js"></script>
 </body>

@@ -25,7 +25,7 @@ from ..estruturas.splay_condicional import ArvoreAfuniladaCondicional
 from .modelos import Clube, Jogador, Liga, Transferencia, normalizar
 
 PASTA_DADOS = Path(__file__).resolve().parents[2] / "dados"
-QUANTOS_AQUECER = 15  # jogadores mais valiosos já "em alta" quando o servidor sobe
+QUANTOS_AQUECER = 30  # jogadores mais valiosos já "em alta" quando o servidor sobe
 
 
 def valor_de_mercado(jogador):
