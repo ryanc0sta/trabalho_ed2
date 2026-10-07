@@ -3,11 +3,11 @@
 //   - clicar no gráfico = valor naquela data (busca de piso);
 //   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
 
-import { api, modoAtual } from "./api.js?v=5";
+import { api, modoAtual } from "./api.js?v=6";
 import {
   animarNumero, atualizarLateral, cardJogador, esc, fotoHTML, formatarData, formatarValor, icone, idade,
   iniciarPagina, mostrarErro, parametro, registrarOperacao, selo, traduzirPe, traduzirPosicao,
-} from "./comum.js?v=5";
+} from "./comum.js?v=6";
 
 iniciarPagina();
 
@@ -56,7 +56,10 @@ function renderizar() {
           ${fato("Pé", traduzirPe(j.pe) === "—" ? null : traduzirPe(j.pe))}
           ${fato("Contrato até", j.contrato ? formatarData(j.contrato) : null)}
         </dl>
-        <div class="acoes-perfil"><button class="botao" id="botao-lista"></button>${selo("minha-lista")}</div>
+        <div class="acoes-perfil">
+          <button class="botao" id="botao-lista"></button>
+          <a class="botao" href="comparar.html?ids=${j.id}">${icone("comparar")}Comparar</a>
+        </div>
       </div>
     </section>
 

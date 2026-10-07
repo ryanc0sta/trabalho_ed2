@@ -67,4 +67,13 @@ export const api = {
   irPara: (ligaId, q, porPagina = 24) =>
     pedir(`/ligas/${ligaId}/ir-para`, { params: comModo({ q, por_pagina: porPagina }) }),
   parecidos: (id) => pedir(`/jogadores/${id}/parecidos`),
+  // segunda leva
+  posicoes: () => pedir("/posicoes"),
+  acessarPosicao: (id) => pedir(`/posicoes/${encodeURIComponent(id)}/acessar`, { metodo: "POST" }),
+  jogadoresDaPosicao: (id, nivel, pagina, porPagina = 24) =>
+    pedir(`/posicoes/${encodeURIComponent(id)}/jogadores`, { params: comModo({ nivel, pagina, por_pagina: porPagina }) }),
+  transferencias: (de, ate, limite = 30) => pedir("/transferencias", { params: { de, ate, limite } }),
+  comparar: (ids) => pedir("/comparar", { params: { ids: ids.join(",") } }),
+  extremos: (ligaId) => pedir(`/ligas/${ligaId}/extremos`),
+  maquina: (clubeId, data) => pedir(`/clubes/${clubeId}/maquina`, { params: { data } }),
 };

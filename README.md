@@ -28,6 +28,9 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | `clube.html?id=281` | Ficha e elenco |
 | `faixa.html` | Jogadores numa faixa de valor: contagem, extremos (piso e teto) e páginas |
 | `lista.html` | Minha lista: jogadores guardados, com inserção e remoção ao vivo |
+| `posicoes.html` | Por posição: lista de posições, cada uma com a sua Skip List (o Exemplo 1 do enunciado) |
+| `transferencias.html` | As maiores transferências de um período |
+| `comparar.html?ids=…` | Até três históricos no mesmo gráfico e as trocas de liderança |
 
 ### Ferramentas e o que cada uma exercita
 
@@ -42,6 +45,17 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | Recomendados para você | página inicial | **AVL com chave composta** `(grupo, -valor, id)`: uma busca de teto por afinidade (clube, posição + liga, país + posição) de cada perfil aberto |
 | Abrir um perfil | página do jogador | **Árvore afunilada condicional**: o jogador é achado pelo nome e vai à raiz na 3ª visita |
 | Vistos por você | barra lateral | Lista com transposição |
+| Por posição | `posicoes.html` | Lista com **movimentação para o início** em que cada item é uma **Skip List** |
+| Janela de transferências | `transferencias.html` | Lista ordenada por data: **busca binária** das duas pontas do período; a **busca por interpolação** roda junto para comparar |
+| Comparar | `comparar.html` | **Percurso em ordem** de várias AVLs + **intercalação** numa linha do tempo |
+| Extremos da liga | página da liga | AVL com chave composta `(liga, nascimento, id)`: **busca da menor e da maior chave** do grupo |
+| Máquina do tempo | página do clube | **Busca de piso** na AVL de histórico de cada jogador do elenco |
+
+**Busca por interpolação, medida na base real.** Para localizar o verão de 2025 entre 175 mil
+transferências, a busca binária fez 35 comparações e a interpolação, 385. As datas se concentram em
+janeiro e julho (quase 70 mil transferências num único mês), e a interpolação supõe chaves bem
+espalhadas. O teste `test_interpolacao_vence_com_chaves_uniformes_e_perde_com_concentradas` mostra os
+dois lados; por isso a ferramenta usa a binária e mostra a contagem da interpolação só como comparação.
 
 ### Como o site mostra qual estrutura cada ferramenta usa
 
@@ -63,7 +77,8 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | Lista encadeada (itens que se reordenam) | Ligas mais visitadas, Buscas recentes, Vistos por você |
 | Torres da lista com saltos (cursor descendo os níveis) | Destaques e páginas da liga, Ir para um nome, Minha lista |
 | Árvore (caminho, rotações, ramos aproveitados inteiros) | Abrir um perfil, Em alta, Recomendados, Valor numa data e pico, Faixa de valor, Parecidos |
-| Busca binária (barras que caem pela metade) | Buscar jogador |
+| Busca binária (barras que caem pela metade) | Buscar jogador, Janela de transferências |
+| Intercalação (fileiras que se juntam numa linha do tempo) | Comparar |
 
 ## Dados usados (backend/dados)
 
@@ -127,3 +142,8 @@ Rotas com `modo` aceitam `modificado` (padrão) ou `classico`. As que executam u
 | `GET /api/em-alta` | AVL por valor: maior chave e predecessores |
 | `GET /api/recomendados?jogador_id=` | AVL de afinidades (chave composta) |
 | `DELETE /api/buscas` | Esvazia a lista de buscas recentes |
+| `GET /api/posicoes` · `POST /api/posicoes/{id}/acessar` · `GET /api/posicoes/{id}/jogadores` | Lista de posições + Skip List de cada uma |
+| `GET /api/transferencias?de=&ate=` | Lista ordenada: binária (e interpolação para comparar) |
+| `GET /api/comparar?ids=` | Percursos em ordem intercalados |
+| `GET /api/ligas/{id}/extremos` | AVLs por idade e por altura (menor e maior chave) |
+| `GET /api/clubes/{id}/maquina?data=` | Busca de piso em cada histórico do elenco |

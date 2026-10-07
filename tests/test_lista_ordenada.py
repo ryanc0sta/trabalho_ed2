@@ -51,3 +51,42 @@ def test_insercao_e_remocao():
     assert lista.chaves == [1, 3, 5, 9]
     assert lista.remover(3) and not lista.remover(3)
     assert lista.chaves == [1, 5, 9]
+
+
+def test_busca_por_interpolacao_da_o_mesmo_indice_que_a_binaria():
+    aleatorio = random.Random(6)
+    for chaves in (
+        sorted(set(aleatorio.randrange(0, 10**6) for _ in range(5000))),          # uniformes
+        sorted(set(1000 * (i // 500) + i for i in range(5000))),                  # em degraus
+        sorted(set(int(aleatorio.paretovariate(1.1) * 100) for _ in range(5000))),  # muito concentradas
+        [7], [3, 3 + 10**9],
+    ):
+        lista = ListaOrdenada.construir([(c, None) for c in chaves])
+        for x in [chaves[0] - 1, chaves[0], chaves[-1], chaves[-1] + 1] + [aleatorio.randrange(chaves[0], chaves[-1] + 2) for _ in range(300)]:
+            assert lista.indice_teto_interpolacao(x) == lista.indice_teto(x) == bisect.bisect_left(chaves, x)
+    assert ListaOrdenada().indice_teto_interpolacao(5) == 0
+
+
+def test_interpolacao_vence_com_chaves_uniformes_e_perde_com_concentradas():
+    from backend.estruturas.rastro import Rastro
+    aleatorio = random.Random(8)
+
+    def medias(chaves):
+        lista = ListaOrdenada.construir([(c, None) for c in chaves])
+        binaria = interpolacao = 0
+        for _ in range(400):
+            x = aleatorio.randrange(chaves[0], chaves[-1] + 1)
+            rb, ri = Rastro(guardar=False), Rastro(guardar=False)
+            lista.indice_teto(x, rb)
+            lista.indice_teto_interpolacao(x, ri)
+            binaria += rb.comparacoes
+            interpolacao += ri.comparacoes
+        return binaria / 400, interpolacao / 400
+
+    uniformes = sorted(set(aleatorio.randrange(0, 10**9) for _ in range(200_000)))
+    binaria, interpolacao = medias(uniformes)
+    assert interpolacao < binaria  # θ(log log n) contra θ(log n)
+    # Concentradas como as datas das transferências: muitos valores colados e alguns distantes.
+    concentradas = sorted(set(list(range(100_000)) + [10**9 + i * 10**6 for i in range(1000)]))
+    binaria, interpolacao = medias(concentradas)
+    assert interpolacao > binaria

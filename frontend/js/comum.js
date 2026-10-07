@@ -2,10 +2,10 @@
 // "Bastidores" — onde ficam os detalhes técnicos (passos de cada operação e a
 // escolha entre as versões modificada e clássica das estruturas).
 
-import { api, definirModo, modoAtual } from "./api.js?v=5";
-import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=5";
+import { api, definirModo, modoAtual } from "./api.js?v=6";
+import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=6";
 
-import { ESTRUTURAS, FERRAMENTAS, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=5";
+import { ESTRUTURAS, FERRAMENTAS, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=6";
 
 export { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo, selo };
 
@@ -65,6 +65,27 @@ export function cardJogador(j, i = 0, legenda = null) {
       </div>
       <div class="num">${formatarValor(j.valor)}</div>
     </a>`;
+}
+
+/**
+ * Reordena os filhos de `container` (identificados por data-id) para `novaOrdem`,
+ * fazendo cada um deslizar do lugar antigo até o novo.
+ */
+export function reordenarComAnimacao(container, novaOrdem) {
+  const itens = [...container.children];
+  const antes = new Map(itens.map((e) => [e.dataset.id, e.getBoundingClientRect()]));
+  novaOrdem.forEach((id) => {
+    const item = itens.find((e) => e.dataset.id === String(id));
+    if (item) container.appendChild(item);
+  });
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (const e of container.children) {
+    const a = antes.get(e.dataset.id);
+    const d = e.getBoundingClientRect();
+    if (!a || (a.left === d.left && a.top === d.top)) continue;
+    e.animate([{ transform: `translate(${a.left - d.left}px, ${a.top - d.top}px)` }, { transform: "none" }],
+      { duration: 420, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" });
+  }
 }
 
 export function esqueletos(quantidade, estilo = "aspect-ratio:4/5") {
@@ -139,13 +160,14 @@ function montarTopo({ busca = true } = {}) {
 }
 
 /** Campo de busca com sugestões. `grande` = versão de destaque da página inicial. */
-export function montarBusca(caixa, { grande = false } = {}) {
+/** `aoEscolher(jogador)`: em vez de abrir o perfil, entrega o jogador escolhido (ex.: Comparar). */
+export function montarBusca(caixa, { grande = false, aoEscolher = null, dica = "Nome ou sobrenome do jogador" } = {}) {
   caixa.classList.add("busca");
   caixa.classList.toggle("grande", grande);
   caixa.innerHTML = `
     <div class="campo">
       ${icone("busca")}
-      <input type="search" placeholder="Nome ou sobrenome do jogador" aria-label="Buscar jogador"
+      <input type="search" placeholder="${esc(dica)}" aria-label="Buscar jogador"
         autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">
     </div>
     <div class="sugestoes oculto" role="listbox"></div>`;
@@ -164,6 +186,12 @@ export function montarBusca(caixa, { grande = false } = {}) {
   const marcar = () => lista.querySelectorAll(".sugestao").forEach((el, i) =>
     el.setAttribute("aria-selected", String(i === selecionado)));
   const abrir = async (jogador) => {
+    if (aoEscolher) {
+      entrada.value = "";
+      fechar();
+      aoEscolher(jogador);
+      return;
+    }
     try {
       const termo = entrada.value.trim();
       const resposta = await api.registrarBusca(termo); // entra nas "buscas recentes"
@@ -479,7 +507,10 @@ export async function montarFrequentes(elemento, secao) {
 const PAGINAS = [
   { grupo: "Explorar", itens: [
     { href: "index.html", icone: "inicio", texto: "Início" },
+    { href: "posicoes.html", icone: "posicoes", texto: "Por posição" },
     { href: "faixa.html", icone: "faixa", texto: "Faixa de valor" },
+    { href: "transferencias.html", icone: "transferencias", texto: "Transferências" },
+    { href: "comparar.html", icone: "comparar", texto: "Comparar" },
   ] },
   { grupo: "Seu espaço", itens: [
     { href: "lista.html", icone: "marcador", texto: "Minha lista", contador: "minha_lista" },

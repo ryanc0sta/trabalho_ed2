@@ -30,6 +30,31 @@ def merge_sort(elementos, chave=lambda x: x):
     return itens
 
 
+def intercalar(sequencias, rastro=None):
+    """Intercala k sequências já ordenadas de pares (chave, valor) numa só,
+    em ordem: a cada passo sai o menor entre os primeiros de cada sequência.
+    Devolve triplas (chave, índice da sequência, valor).
+
+    É o passo de intercalação do merge sort, aplicado aos percursos em ordem
+    de várias árvores de busca: como cada árvore já entrega suas chaves em
+    ordem, não é preciso ordenar nada."""
+    iteradores = [iter(s) for s in sequencias]
+    frentes = [next(it, None) for it in iteradores]
+    resultado = []
+    while True:
+        menor = None
+        for i, par in enumerate(frentes):
+            if par is not None and (menor is None or par[0] < frentes[menor][0]):
+                menor = i
+        if menor is None:
+            return resultado
+        chave, valor = frentes[menor]
+        if rastro is not None:
+            rastro.registrar("intercala", fonte=menor, no=str(chave))
+        resultado.append((chave, menor, valor))
+        frentes[menor] = next(iteradores[menor], None)
+
+
 def _intercalar(chaves, itens, chaves_dest, itens_dest, inicio, meio, fim):
     if meio >= fim or chaves[meio - 1] <= chaves[meio]:
         # Os dois blocos já estão em ordem entre si: basta copiar.

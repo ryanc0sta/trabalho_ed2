@@ -188,3 +188,14 @@ def test_dedo_volta_ao_inicio_e_e_descartado_quando_a_lista_muda():
     assert lista.posicao_teto("u")[0] == bisect.bisect_left(sorted(chaves + ["tzzzzz"]), "u") + 1
     lista.remover(chaves[0])
     assert lista._dedo is None
+
+
+def test_intercalar_sequencias_ordenadas():
+    from backend.estruturas.ordenacao import intercalar
+    a = [(1, "a"), (4, "a"), (9, "a")]
+    b = [(2, "b"), (3, "b"), (10, "b")]
+    c = []
+    rastro = Rastro()
+    assert intercalar([a, b, c], rastro) == [(1, 0, "a"), (2, 1, "b"), (3, 1, "b"), (4, 0, "a"), (9, 0, "a"), (10, 1, "b")]
+    assert [p["fonte"] for p in rastro.passos] == [0, 1, 1, 0, 0, 1]
+    assert intercalar([]) == [] and intercalar([[], []]) == []

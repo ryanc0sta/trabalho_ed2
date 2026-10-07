@@ -27,6 +27,8 @@ from .dados.carregar import CRITERIOS_DE_AFINIDADE
 from .visualizacao import (dados_no_afinidade, dados_no_historico, dados_no_jogador, dados_no_valor,
                            itens_ligas, nos_skip, recorte_arvore)
 
+DATA = r"^\d{4}-\d{2}-\d{2}$"
+
 RAIZ = Path(__file__).resolve().parent.parent
 log = logging.getLogger("uvicorn.error")
 
@@ -116,22 +118,21 @@ async def acessar_liga(request: Request, liga_id: str, modo: Modo = "modificado"
 @app.get("/api/ligas/{liga_id}", tags=["ligas"], summary="Dados da liga e níveis da Skip List")
 async def detalhar_liga(request: Request, liga_id: str):
     base = obter_base(request)
-    liga = obter_liga(base, liga_id)
-    niveis = [{"nivel": k, "jogadores": len(liga.skip.nos_do_nivel(k)),
-               "valor_minimo": limiar(liga, k)} for k in range(liga.skip.nivel + 1)]
-    niveis_classica = [{"nivel": k, "jogadores": len(liga.skip_classica.nos_do_nivel(k))}
-                       for k in range(liga.skip_classica.nivel + 1)]
-    return {**liga.para_json(), "niveis": niveis, "niveis_classica": niveis_classica}
+    return detalhe_com_niveis(obter_liga(base, liga_id))
 
 
-@app.get("/api/ligas/{liga_id}/jogadores", tags=["ligas"],
-         summary="Jogadores de um nível da Skip List, paginados")
-async def jogadores_da_liga(request: Request, liga_id: str, nivel: int = Query(0, ge=0),
-                            pagina: int = Query(1, ge=1), por_pagina: int = Query(24, ge=1, le=100),
-                            modo: Modo = "modificado"):
-    base = obter_base(request)
-    liga = obter_liga(base, liga_id)
-    skip = liga.skip if modo == "modificado" else liga.skip_classica
+def detalhe_com_niveis(colecao):
+    """Liga ou posição com os níveis das suas Skip Lists (modificada e clássica)."""
+    niveis = [{"nivel": k, "jogadores": len(colecao.skip.nos_do_nivel(k)),
+               "valor_minimo": limiar(colecao, k)} for k in range(colecao.skip.nivel + 1)]
+    niveis_classica = [{"nivel": k, "jogadores": len(colecao.skip_classica.nos_do_nivel(k))}
+                       for k in range(colecao.skip_classica.nivel + 1)]
+    return {**colecao.para_json(), "niveis": niveis, "niveis_classica": niveis_classica}
+
+
+def pagina_de_jogadores(colecao, nivel, pagina, por_pagina, modo):
+    """Uma página dos jogadores de um nível da Skip List de uma liga ou posição."""
+    skip = colecao.skip if modo == "modificado" else colecao.skip_classica
     nivel = min(nivel, skip.nivel)
     inicio = (pagina - 1) * por_pagina + 1
     rastro = Rastro()
@@ -145,11 +146,21 @@ async def jogadores_da_liga(request: Request, liga_id: str, nivel: int = Query(0
         total = len(torres)
         triplas = torres[inicio - 1: inicio - 1 + por_pagina]
     return {
-        "modo": modo, "liga": liga.para_json(), "nivel": nivel, "nivel_maximo": skip.nivel,
-        "valor_minimo": limiar(liga, nivel) if modo == "modificado" else None,
+        "modo": modo, "nivel": nivel, "nivel_maximo": skip.nivel,
+        "valor_minimo": limiar(colecao, nivel) if modo == "modificado" else None,
         "total": total, "pagina": pagina, "paginas": max(1, -(-total // por_pagina)),
         "jogadores": nos_skip(triplas, inicio), "rastro": rastro.para_json(),
     }
+
+
+@app.get("/api/ligas/{liga_id}/jogadores", tags=["ligas"],
+         summary="Jogadores de um nível da Skip List, paginados")
+async def jogadores_da_liga(request: Request, liga_id: str, nivel: int = Query(0, ge=0),
+                            pagina: int = Query(1, ge=1), por_pagina: int = Query(24, ge=1, le=100),
+                            modo: Modo = "modificado"):
+    base = obter_base(request)
+    liga = obter_liga(base, liga_id)
+    return {"liga": liga.para_json(), **pagina_de_jogadores(liga, nivel, pagina, por_pagina, modo)}
 
 
 @app.get("/api/ligas/{liga_id}/estrutura", tags=["ligas"],
@@ -456,6 +467,131 @@ async def ir_para(request: Request, liga_id: str, q: str = Query(..., min_length
     posicao, _, jogador = achado
     return {"modo": modo, "posicao": posicao, "pagina": (posicao - 1) // por_pagina + 1,
             "jogador": jogador.resumo(), "rastro": rastro.para_json()}
+
+
+# ------------------------------------------------------------- segunda leva
+def obter_posicao(base, posicao_id):
+    posicao = base.posicao(posicao_id)
+    if posicao is None:
+        raise HTTPException(404, f"Posição {posicao_id} não encontrada.")
+    return posicao
+
+
+def itens_posicoes(base):
+    return [posicao.para_json() for _, posicao in base.posicoes]
+
+
+@app.get("/api/posicoes", tags=["ferramentas"], summary="Posições na ordem atual da lista")
+async def listar_posicoes(request: Request):
+    return {"posicoes": itens_posicoes(obter_base(request))}
+
+
+@app.post("/api/posicoes/{posicao_id}/acessar", tags=["ferramentas"],
+          summary="Escolhe uma posição: movimentação para o início (Exemplo 1 do enunciado)")
+async def acessar_posicao(request: Request, posicao_id: str):
+    base = obter_base(request)
+    posicao = obter_posicao(base, posicao_id)
+    antes = itens_posicoes(base)
+    rastro = Rastro()
+    base.posicoes.buscar(posicao_id, rastro)
+    return {"antes": antes, "depois": itens_posicoes(base), "rastro": rastro.para_json(),
+            "posicao": detalhe_com_niveis(posicao)}
+
+
+@app.get("/api/posicoes/{posicao_id}/jogadores", tags=["ferramentas"],
+         summary="Jogadores de um nível da Skip List da posição, paginados")
+async def jogadores_da_posicao(request: Request, posicao_id: str, nivel: int = Query(0, ge=0),
+                               pagina: int = Query(1, ge=1), por_pagina: int = Query(24, ge=1, le=100),
+                               modo: Modo = "modificado"):
+    base = obter_base(request)
+    posicao = obter_posicao(base, posicao_id)
+    return {"posicao": posicao.para_json(), **pagina_de_jogadores(posicao, nivel, pagina, por_pagina, modo)}
+
+
+@app.get("/api/transferencias", tags=["ferramentas"],
+         summary="Transferências de um período (busca binária na lista ordenada por data)")
+async def janela_de_transferencias(request: Request, de: str = Query(..., pattern=DATA),
+                                   ate: str = Query(..., pattern=DATA),
+                                   limite: int = Query(30, ge=1, le=100)):
+    base = obter_base(request)
+    if de > ate:
+        raise HTTPException(422, "A data inicial deve vir antes da final.")
+    rastro = Rastro()
+    try:
+        total, maiores, binaria, interpolacao = base.transferencias_na_janela(de, ate, limite, rastro)
+    except ValueError:
+        raise HTTPException(422, "Data inválida.")
+    return {
+        "de": de, "ate": ate, "total": total, "na_base": len(base.janela),
+        "comparacoes_binaria": binaria, "comparacoes_interpolacao": interpolacao,
+        "transferencias": [{"jogador_id": jogador_id, "jogador": nome, **t.para_json()}
+                           for jogador_id, nome, t in maiores],
+        "rastro": rastro.para_json(),
+    }
+
+
+@app.get("/api/comparar", tags=["ferramentas"],
+         summary="Históricos de até 3 jogadores numa linha do tempo (intercalação de percursos em ordem)")
+async def comparar(request: Request, ids: str = Query(..., pattern=r"^\d+(,\d+){0,2}$")):
+    base = obter_base(request)
+    jogadores = [obter_jogador(base, int(i)) for i in ids.split(",")]
+    rastro = Rastro()
+    arvores, linha = base.comparar(jogadores, rastro)
+    # Percorre a linha do tempo conjunta uma vez para achar as trocas de liderança.
+    atuais, lider, viradas = [None] * len(jogadores), None, []
+    for data, indice, valor in linha:
+        atuais[indice] = valor
+        novo = max((i for i, v in enumerate(atuais) if v is not None), key=lambda i: atuais[i])
+        if novo != lider:
+            if lider is not None:
+                viradas.append({"data": data, "jogador": novo, "valor": atuais[novo], "passou": lider})
+            lider = novo
+    return {
+        "jogadores": [j.resumo() for j in jogadores],
+        "series": [[{"data": data, "valor": valor} for data, valor in arvore] for arvore in arvores],
+        "linha": [{"data": data, "jogador": indice, "valor": valor} for data, indice, valor in linha],
+        "viradas": viradas,
+        "rastro": rastro.para_json(),
+    }
+
+
+@app.get("/api/ligas/{liga_id}/extremos", tags=["ferramentas"],
+         summary="O mais velho, o mais jovem, o mais baixo e o mais alto da liga (menor e maior chave)")
+async def extremos(request: Request, liga_id: str):
+    base = obter_base(request)
+    obter_liga(base, liga_id)
+    rastro = Rastro()
+    achados = base.extremos_da_liga(liga_id, rastro)
+    return {
+        "extremos": {nome: (j.resumo() | {"nascimento": j.nascimento, "altura": j.altura}) if j else None
+                     for nome, j in achados.items()},
+        "rastro": rastro.para_json(),
+        "arvore": recorte_arvore(base.por_idade, [(liga_id,), (liga_id, "\uffff")], profundidade=2,
+                                 dados_no=lambda no: {"nome": no.valor.nome, "nascimento": no.chave[1],
+                                                      "grupo": no.chave[0]}),
+    }
+
+
+@app.get("/api/clubes/{clube_id}/maquina", tags=["ferramentas"],
+         summary="Valor do elenco atual numa data passada (busca de piso em cada histórico)")
+async def maquina_do_tempo(request: Request, clube_id: int, data: str = Query(..., pattern=DATA)):
+    base = obter_base(request)
+    clube = base.clube(clube_id)
+    if clube is None:
+        raise HTTPException(404, f"Clube {clube_id} não encontrado.")
+    rastro = Rastro()
+    linhas, comparacoes, primeira = base.maquina_do_tempo(clube, data, rastro)
+    com_valor = [(j, valor, quando) for j, valor, quando in linhas if valor is not None]
+    return {
+        "data": data, "total": sum(valor for _, valor, _ in com_valor), "hoje": clube.valor_total,
+        "com_valor": len(com_valor), "elenco": len(linhas), "comparacoes": comparacoes,
+        "jogadores": [j.resumo() | {"valor_na_data": valor, "avaliacao": quando}
+                      for j, valor, quando in merge_sort(com_valor, chave=lambda linha: -linha[1])],
+        "primeiro": linhas[0][0].nome if linhas else None,
+        "rastro": rastro.para_json(),
+        "arvore": recorte_arvore(primeira, profundidade=64, dados_no=dados_no_historico) if primeira else None,
+        "alvo": linhas[0][2] if linhas else None,
+    }
 
 
 # ----------------------------------------------------------------------- clubes

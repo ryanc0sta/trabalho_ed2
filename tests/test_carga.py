@@ -76,11 +76,17 @@ def base(tmp_path_factory):
     ])
     escrever(pasta, "transfers.csv", ["player_id", "transfer_date", "transfer_season",
                                       "from_club_id", "to_club_id", "from_club_name",
-                                      "to_club_name", "transfer_fee", "market_value_in_eur"], [
-        {"player_id": 1, "transfer_date": "2022-07-01", "transfer_season": "22/23",
+                                      "to_club_name", "transfer_fee", "market_value_in_eur",
+                                      "player_name"], [
+        {"player_id": 3, "transfer_date": "2022-07-01", "transfer_season": "22/23", "player_name": "Markus Haaland",
+         "from_club_id": 11, "to_club_id": 11, "from_club_name": "Arsenal U21", "to_club_name": "Arsenal"},
+        {"player_id": 5, "transfer_date": "2019-07-12", "transfer_season": "19/20", "player_name": "Nicolò Barella",
+         "from_club_id": 1390, "to_club_id": 46, "from_club_name": "Cagliari", "to_club_name": "Inter",
+         "transfer_fee": "32500000.000"},
+        {"player_id": 1, "transfer_date": "2022-07-01", "transfer_season": "22/23", "player_name": "Erling Haaland",
          "from_club_id": 16, "to_club_id": 281, "from_club_name": "Dortmund",
          "to_club_name": "Man City", "transfer_fee": "60000000.000"},
-        {"player_id": 1, "transfer_date": "2020-01-01", "transfer_season": "19/20",
+        {"player_id": 1, "transfer_date": "2020-01-01", "transfer_season": "19/20", "player_name": "Erling Haaland",
          "from_club_id": 409, "to_club_id": 16, "from_club_name": "Salzburg",
          "to_club_name": "Dortmund", "transfer_fee": "20000000.000"},
     ])
@@ -204,6 +210,54 @@ def test_historico_avl(base):
     assert avl.pico("2018-01-01", "2022-01-01") == ("2021-10-07", 150_000_000)
     assert [p for p in rastro.passos if p["passo"] == "rotacao"]  # inserção em ordem rotaciona
     assert len(base.historico(999)) == 0
+
+
+# ------------------------------------------------------- segunda leva
+def test_posicoes_com_skip_list_e_movimentacao_para_o_inicio(base):
+    assert base.posicoes.chaves() == ["Centre-Forward"]  # na base de teste todos são centroavantes
+    posicao = base.posicao("Centre-Forward")
+    assert posicao.jogadores == 7 and len(posicao.skip) == len(posicao.skip_classica) == 7
+    assert posicao.skip.nos_do_nivel(posicao.skip.nivel)[0][1].id == 1  # o topo é o mais valioso
+    assert base.posicao("Goalkeeper") is None
+
+
+def test_janela_de_transferencias_binaria_e_interpolacao_concordam(base):
+    total, maiores, binaria, interpolacao = base.transferencias_na_janela("2019-01-01", "2020-12-31")
+    assert total == 2 and binaria > 0 and interpolacao > 0
+    assert [(nome, t.taxa) for _, nome, t in maiores] == [("Nicolò Barella", 32_500_000), ("Erling Haaland", 20_000_000)]
+    # O dia final entra inteiro, mesmo com várias transferências na mesma data.
+    assert base.transferencias_na_janela("2022-07-01", "2022-07-01")[0] == 2
+    assert base.transferencias_na_janela("2000-01-01", "2000-12-31")[0] == 0
+    assert len(base.janela) == 4
+
+
+def test_extremos_da_liga(base):
+    # Todos nasceram no mesmo dia na base de teste: a menor chave tem o menor id, a maior, o maior.
+    rastro = Rastro()
+    extremos = base.extremos_da_liga("IT1", rastro)
+    assert extremos["mais_velho"].id == 5 and extremos["mais_jovem"].id == 8
+    assert extremos["mais_alto"].liga_id == "IT1" and extremos["mais_baixo"].liga_id == "IT1"
+    assert [p["nome"] for p in rastro.passos if p["passo"] == "etapa"] == ["mais_velho", "mais_jovem"]
+    assert base.extremos_da_liga("XX9")["mais_velho"] is None  # liga sem jogadores
+
+
+def test_comparar_intercala_os_historicos_por_data(base):
+    rastro = Rastro()
+    arvores, linha = base.comparar([base.jogador(1), base.jogador(2)], rastro)
+    assert [len(a) for a in arvores] == [4, 1]
+    assert [(data, indice) for data, indice, _ in linha] == [
+        ("2017-01-01", 0), ("2019-12-16", 0), ("2020-01-01", 1), ("2021-10-07", 0), ("2024-12-16", 0)]
+    assert [p["fonte"] for p in rastro.passos] == [0, 0, 1, 0, 0]
+
+
+def test_maquina_do_tempo(base):
+    rastro = Rastro()
+    linhas, comparacoes, arvore = base.maquina_do_tempo(base.clube(281), "2020-06-01", rastro)
+    assert [(j.id, valor, quando) for j, valor, quando in linhas] == [(1, 45_000_000, "2019-12-16")]
+    assert comparacoes > 0 and len(arvore) == 4
+    # Jogador sem avaliação até a data fica sem valor.
+    linhas, _, _ = base.maquina_do_tempo(base.clube(11), "2019-01-01")
+    assert [valor for _, valor, _ in linhas] == [None, None]
 
 
 def test_transferencias_em_ordem(base):

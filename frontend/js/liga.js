@@ -2,11 +2,11 @@
 // percorre os níveis da lista com saltos (cada nível tem metade dos jogadores
 // do anterior — os mais valiosos, na versão modificada).
 
-import { api, modoAtual } from "./api.js?v=5";
+import { api, modoAtual } from "./api.js?v=6";
 import {
-  cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
+  cardJogador, esc, esqueletos, formatarValor, fotoHTML, icone, idade, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=5";
+} from "./comum.js?v=6";
 
 iniciarPagina();
 
@@ -213,9 +213,44 @@ async function iniciar() {
     renderizarCabecalho();
     renderizarFiltro();
     carregarJogadores();
+    carregarRecordes();
   } catch (erro) {
     mostrarErro(elCabecalho, erro);
     elJogadores.innerHTML = "";
+  }
+}
+
+// Os extremos da liga: o mais velho, o mais jovem, o mais baixo e o mais alto.
+async function carregarRecordes() {
+  const alvo = document.getElementById("recordes");
+  try {
+    const dados = await api.extremos(ligaId);
+    const e = dados.extremos;
+    const anos = (j) => `${idade(j.nascimento)} anos`;
+    const metros = (j) => `${(j.altura / 100).toFixed(2).replace(".", ",")} m`;
+    const itens = [
+      ["Mais jovem", e.mais_jovem, anos], ["Mais velho", e.mais_velho, anos],
+      ["Mais alto", e.mais_alto, metros], ["Mais baixo", e.mais_baixo, metros],
+    ].filter(([, jogador]) => jogador);
+    if (!itens.length) return;
+    alvo.innerHTML = `
+      <div class="recordes">
+        ${itens.map(([rotulo, j, medida]) => `
+          <a class="recorde" href="jogador.html?id=${j.id}">
+            ${fotoHTML(j.foto, j.nome, "avatar")}
+            <div><div class="meta">${rotulo} · <span class="num">${medida(j)}</span></div><div class="nome">${esc(j.nome)}</div></div>
+          </a>`).join("")}
+        ${selo("extremos")}
+      </div>`;
+    registrarOperacao({
+      ferramenta: "extremos",
+      titulo: `Extremos de ${detalhe.nome}`,
+      rastro: dados.rastro,
+      cena: { arvore: dados.arvore },
+      resultado: `O mais velho e o mais jovem entre ${detalhe.jogadores} jogadores, com ${dados.rastro.comparacoes} comparações: são as duas pontas do grupo da liga na árvore.`,
+    });
+  } catch {
+    alvo.innerHTML = "";
   }
 }
 

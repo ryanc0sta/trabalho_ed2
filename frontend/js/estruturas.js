@@ -6,7 +6,7 @@
 //
 // Cenas: lista (encadeada), torres (lista com saltos), árvore e vetor (busca binária).
 
-import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=5";
+import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=6";
 
 // ---------------------------------------------------------------- catálogo
 export const ESTRUTURAS = {
@@ -56,7 +56,7 @@ export const FERRAMENTAS = {
     porQue: "As ligas que você abre ganham pontos e sobem; assim as suas favoritas aparecem primeiro.",
   },
   destaques: {
-    nome: "Destaques e páginas da liga", estrutura: "saltos", cena: "torres",
+    nome: "Destaques e páginas", estrutura: "saltos", cena: "torres",
     onde: { texto: "Abrir a Premier League", href: "liga.html?id=GB1" },
     porQue: "Os jogadores mais valiosos ganham torres mais altas: olhar a lista “de cima” mostra só os destaques, e os saltos levam direto a qualquer página.",
   },
@@ -89,6 +89,31 @@ export const FERRAMENTAS = {
     nome: "Abrir um perfil", estrutura: "afunilada", cena: "arvore",
     onde: { texto: "Abrir um jogador pela busca", href: "index.html" },
     porQue: "Cada perfil é achado pelo nome nesta árvore. Quem você abre três vezes é levado à raiz e, daí em diante, é achado em menos passos.",
+  },
+  posicoes: {
+    nome: "Por posição", estrutura: "lista-inicio", cena: "lista",
+    onde: { texto: "Abrir as posições", href: "posicoes.html" },
+    porQue: "Cada posição é um item da lista, e a que você escolhe vai para o início. Cada item guarda a sua própria lista com saltos, com os jogadores daquela posição.",
+  },
+  transferencias: {
+    nome: "Janela de transferências", estrutura: "lista-ordenada", cena: "vetor",
+    onde: { texto: "Abrir as transferências", href: "transferencias.html" },
+    porQue: "As transferências ficam numa lista ordenada pela data. Duas buscas acham onde o período começa e onde termina; tudo o que está entre os dois pontos é a resposta. Aqui a busca binária vence a busca por interpolação, porque as datas se concentram em janeiro e julho.",
+  },
+  comparar: {
+    nome: "Comparar jogadores", estrutura: "avl", cena: "intercalacao",
+    onde: { texto: "Abrir a comparação", href: "comparar.html" },
+    porQue: "O histórico de cada jogador é uma árvore ordenada pela data. Percorrer a árvore em ordem já entrega as avaliações em sequência; juntar os percursos, pegando sempre a data mais antiga, monta a linha do tempo conjunta sem ordenar nada.",
+  },
+  extremos: {
+    nome: "Extremos da liga", estrutura: "avl-composta", cena: "arvore",
+    onde: { texto: "Abrir a Premier League", href: "liga.html?id=GB1" },
+    porQue: "Na árvore por idade a chave começa pela liga, então os jogadores de uma liga ficam juntos, do mais velho ao mais jovem. Os extremos são a menor e a maior chave do grupo. Outra árvore, por altura, funciona do mesmo jeito.",
+  },
+  maquina: {
+    nome: "Máquina do tempo", estrutura: "avl", cena: "arvore",
+    onde: { texto: "Abrir o Manchester City", href: "clube.html?id=281" },
+    porQue: "O valor de um jogador numa data é a última avaliação até aquele dia: uma busca de piso na árvore de histórico dele. Para o elenco, a mesma busca se repete na árvore de cada jogador.",
   },
   recomendados: {
     nome: "Recomendados para você", estrutura: "avl-composta", cena: "arvore",
@@ -394,6 +419,7 @@ const EXPLICA_CASO = {
 
 function rotuloDoNo(dados) {
   if (dados.data) return `${dados.data.slice(5, 7)}/${dados.data.slice(2, 4)}`;
+  if (dados.nascimento) return dados.nascimento.slice(0, 4); // árvore por idade: o ano de nascimento
   if (dados.tam !== undefined) return formatarValor(dados.valor);
   const partes = String(dados.nome ?? nomeDoNo(dados.id)).split(" ");
   return curto(partes[partes.length - 1], 9);
@@ -455,6 +481,8 @@ function cenaArvore(op) {
     clube: "Primeira busca: desce até o primeiro jogador do mesmo clube.",
     liga: "Segunda busca, do mesmo jeito: desce até o primeiro jogador da mesma posição e da mesma liga.",
     pais: "Terceira busca: desce até o primeiro jogador do mesmo país e da mesma posição.",
+    mais_velho: "Primeira busca: a menor chave da liga — quem nasceu há mais tempo. Desce até o começo do grupo da liga.",
+    mais_jovem: "Segunda busca, do mesmo jeito: a maior chave da liga — quem nasceu por último.",
   };
   quadro("A árvore antes da operação. A busca sempre começa pela raiz, no topo.");
   passos.forEach((p, indice) => {
@@ -462,7 +490,7 @@ function cenaArvore(op) {
       case "etapa":
         atual = estrutura.raiz; visitados.clear(); marcas.clear();
         // Descidas que repetem a ideia da anterior ganham um quadro só.
-        resumido = ["pagina", "liga", "pais"].includes(p.nome);
+        resumido = ["pagina", "liga", "pais", "mais_jovem"].includes(p.nome);
         quadro(ETAPAS[p.nome] || "");
         break;
       case "compara": {
@@ -589,6 +617,7 @@ function cenaArvore(op) {
         const g = el("g", { class: `no-arvore${d.resumo ? " resumo" : ""}` });
         g.append(el("title", {}, d.resumo ? "ramo não desenhado"
           : d.data ? `${nomeDoNo(d.data)} — ${formatarValor(d.valor)}`
+            : d.nascimento ? `${d.nome} — nascido em ${nomeDoNo(d.nascimento)}`
             : `${d.nome ?? nomeDoNo(id)}${d.valor ? ` — ${formatarValor(d.valor)}` : ""}${d.grupo ? ` (${d.grupo})` : ""}`));
         if (d.resumo) g.append(el("path", { d: "M0 -9 L9 8 L-9 8 Z" }));
         else {
@@ -638,21 +667,35 @@ function cenaArvore(op) {
 }
 
 // ===================================================================== vetor
+/** Número do dia (como no servidor) -> "dd/mm/aaaa". */
+function dataDoDia(chave) {
+  const dia = Math.floor(Number(chave) / 1e6);
+  return new Date((dia - 719163) * 86400000).toISOString().slice(0, 10).split("-").reverse().join("/");
+}
+
 function cenaVetor(op) {
-  const comparacoes = (op.rastro?.passos || []).filter((p) => p.passo === "compara" && p.meio !== undefined);
-  const total = comparacoes.length ? comparacoes[0].meio * 2 + 1 : 0;
+  // Comparações da busca binária (as "de limite" são da busca por interpolação, que não é animada).
+  const comparacoes = (op.rastro?.passos || []).filter((p) => p.passo === "compara" && p.meio !== undefined && p.decisao !== "limite");
+  const datas = op.cena?.chave === "dia"; // lista de transferências: a chave é um dia
+  const itens = datas ? "transferências, em ordem de data" : "trechos de nomes, em ordem alfabética";
+  const total = op.cena?.total ?? (comparacoes.length ? comparacoes[0].meio * 2 + 1 : 0);
   let inf = 0;
   let sup = total - 1;
-  const faixas = [{ restam: total, legenda: `A lista tem cerca de ${total.toLocaleString("pt-BR")} trechos de nomes, em ordem alfabética.` }];
+  const faixas = [{ restam: total, legenda: `A lista tem ${datas ? "" : "cerca de "}${total.toLocaleString("pt-BR")} ${itens}.` }];
   for (const p of comparacoes) {
     if (p.decisao === "esquerda") sup = p.meio - 1; else inf = p.meio + 1;
-    const restam = Math.max(0, sup - inf + 1);
+    const restam = p.restam ?? Math.max(0, sup - inf + 1);
+    const pivo = datas ? dataDoDia(p.no) : nomeDoNo(p.no);
     faixas.push({
-      restam, pivo: nomeDoNo(p.no),
-      legenda: `Abre no meio: “${nomeDoNo(p.no)}”. O alvo vem ${p.decisao === "esquerda" ? "antes" : "depois"} — descarta a outra metade. Restam ${restam.toLocaleString("pt-BR")}.`,
+      restam, pivo,
+      legenda: `Abre no meio: ${datas ? pivo : `“${pivo}”`}. O ${datas ? "começo do período" : "alvo"} vem ${p.decisao === "esquerda" ? "antes" : "depois"} — descarta a outra metade. Restam ${restam.toLocaleString("pt-BR")}.`,
     });
   }
-  if (faixas.length > 1) faixas[faixas.length - 1].legenda = `Com ${comparacoes.length} comparações chegou ao ponto exato da lista — sem ler os ${total.toLocaleString("pt-BR")} nomes.`;
+  if (faixas.length > 1) {
+    faixas[faixas.length - 1].legenda = datas
+      ? `Com ${comparacoes.length} comparações achou onde o período começa. Uma segunda busca igual acha onde ele termina.`
+      : `Com ${comparacoes.length} comparações chegou ao ponto exato da lista — sem ler os ${total.toLocaleString("pt-BR")} nomes.`;
+  }
   const passoY = 17;
   const altura = faixas.length * passoY + 16;
   const larguraMaxima = L - 150;
@@ -680,8 +723,66 @@ function cenaVetor(op) {
   };
 }
 
+// ============================================================== intercalação
+// Uma fileira por jogador (as avaliações na ordem em que a árvore as entrega)
+// e, embaixo, a linha do tempo conjunta sendo montada.
+function cenaIntercalacao(op) {
+  const nomes = op.cena?.nomes || [];
+  const tamanhos = op.cena?.tamanhos || [];
+  const picks = (op.rastro?.passos || []).filter((p) => p.passo === "intercala");
+  const total = picks.length;
+  const lote = Math.max(1, Math.ceil(total / 36)); // animações longas avançam alguns pontos por quadro
+  const quadros = [{ feitos: 0, legenda: "Cada fileira é o histórico de um jogador, já em ordem de data — é assim que o percurso da árvore entrega." }];
+  for (let feitos = lote; feitos < total + lote; feitos += lote) {
+    const n = Math.min(feitos, total);
+    const ultimo = picks[n - 1];
+    quadros.push({
+      feitos: n,
+      legenda: n < total
+        ? `Entre as próximas avaliações de cada jogador, a mais antiga é a de ${nomeDoNo(ultimo.no)}, de ${nomes[ultimo.fonte]}: ela entra na linha do tempo.`
+        : `Pronto: as ${total} avaliações estão numa só linha do tempo, sem que nada precisasse ser ordenado.`,
+    });
+  }
+  const margem = 96;
+  const largura = L - margem - 12;
+  const passoY = 34;
+  const altura = (nomes.length + 1) * passoY + 30;
+  const maior = Math.max(1, ...tamanhos);
+  const pontos = []; // {ordem na linha do tempo, fonte, origem, destino}
+  const vistos = nomes.map(() => 0);
+  picks.forEach((p, k) => {
+    const i = vistos[p.fonte]++;
+    pontos.push({
+      k, fonte: p.fonte,
+      origem: [margem + (largura * i) / Math.max(1, maior - 1), 18 + p.fonte * passoY],
+      destino: [margem + (largura * k) / Math.max(1, total - 1), 18 + nomes.length * passoY + 12],
+    });
+  });
+  return {
+    altura, quadros,
+    montar(svg) {
+      nomes.forEach((nome, i) => svg.append(el("text", { class: "rotulo-fileira", x: 0, y: 22 + i * passoY }, curto(nome.split(" ").pop(), 13))));
+      svg.append(el("line", { class: "trilho", x1: 0, x2: L, y1: 18 + nomes.length * passoY - 6, y2: 18 + nomes.length * passoY - 6 }));
+      svg.append(el("text", { class: "rotulo-fileira", x: 0, y: 22 + nomes.length * passoY + 12 }, "Linha do tempo"));
+      for (const ponto of pontos) {
+        ponto.el = el("circle", { class: `ponto-serie serie-${ponto.fonte}`, r: 4.5 });
+        ponto.el.append(el("title", {}, `${nomeDoNo(picks[ponto.k].no)} — ${nomes[ponto.fonte]}`));
+        svg.append(ponto.el);
+      }
+    },
+    mostrar(i) {
+      const { feitos } = quadros[i];
+      for (const ponto of pontos) {
+        const [x, y] = ponto.k < feitos ? ponto.destino : ponto.origem;
+        ponto.el.style.transform = `translate(${x}px, ${y}px)`;
+        ponto.el.classList.toggle("atual", ponto.k === feitos - 1 && feitos < total);
+      }
+    },
+  };
+}
+
 // ================================================================ reprodutor
-const CENAS = { lista: cenaLista, torres: cenaTorres, arvore: cenaArvore, vetor: cenaVetor };
+const CENAS = { lista: cenaLista, torres: cenaTorres, arvore: cenaArvore, vetor: cenaVetor, intercalacao: cenaIntercalacao };
 
 /**
  * Monta a animação de uma operação dentro de `container`.

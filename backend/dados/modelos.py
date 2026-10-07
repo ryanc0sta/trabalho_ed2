@@ -95,6 +95,22 @@ class Liga:
         return _para_json(self)
 
 
+class Posicao:
+    """Uma posição em campo (ex.: Centre-Forward) com a Skip List dos seus jogadores."""
+    __slots__ = ("id", "jogadores", "valor_total", "skip", "skip_classica")
+    CAMPOS_JSON = ("id", "jogadores", "valor_total")
+
+    def __init__(self, id):
+        self.id = id
+        self.jogadores = 0
+        self.valor_total = 0
+        self.skip = None
+        self.skip_classica = None
+
+    def para_json(self):
+        return _para_json(self)
+
+
 class Transferencia:
     __slots__ = ("data", "temporada", "de_clube_id", "de_clube", "para_clube_id",
                  "para_clube", "taxa", "valor_mercado")

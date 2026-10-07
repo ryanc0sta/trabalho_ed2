@@ -236,6 +236,55 @@ def test_respostas_trazem_o_que_as_animacoes_desenham(cliente):
     assert "novo termo" not in resposta["antes"] and resposta["buscas"][0] == "novo termo"
 
 
+def test_posicoes(cliente):
+    assert [p["id"] for p in cliente.get("/api/posicoes").json()["posicoes"]] == ["Centre-Forward"]
+    acesso = cliente.post("/api/posicoes/Centre-Forward/acessar").json()
+    assert acesso["posicao"]["jogadores"] == 7 and acesso["posicao"]["niveis"][0]["jogadores"] == 7
+    assert acesso["rastro"]["passos"][0]["passo"] == "compara"
+    pagina = cliente.get("/api/posicoes/Centre-Forward/jogadores?nivel=0&por_pagina=3").json()
+    assert pagina["total"] == 7 and pagina["paginas"] == 3 and len(pagina["jogadores"]) == 3
+    topo = cliente.get(f"/api/posicoes/Centre-Forward/jogadores?nivel={pagina['nivel_maximo']}").json()
+    assert topo["jogadores"][0]["nome"] == "Erling Haaland"
+    assert cliente.post("/api/posicoes/Goleiro/acessar").status_code == 404
+
+
+def test_janela_de_transferencias(cliente):
+    janela = cliente.get("/api/transferencias?de=2019-01-01&ate=2022-12-31").json()
+    assert janela["total"] == 4 and janela["na_base"] == 4
+    assert [t["jogador"] for t in janela["transferencias"]][:2] == ["Erling Haaland", "Nicolò Barella"]  # €60M, €32,5M
+    assert janela["transferencias"][0]["para_clube"] == "Man City"
+    assert janela["comparacoes_binaria"] > 0 and janela["comparacoes_interpolacao"] > 0
+    assert all("restam" in p for p in janela["rastro"]["passos"])
+    assert cliente.get("/api/transferencias?de=2022-01-01&ate=2021-01-01").status_code == 422
+    assert cliente.get("/api/transferencias?de=2022-13-45&ate=2023-01-01").status_code == 422
+
+
+def test_comparar(cliente):
+    resposta = cliente.get("/api/comparar?ids=1,2").json()
+    assert [j["nome"] for j in resposta["jogadores"]] == ["Erling Haaland", "Bukayo Saka"]
+    assert [len(serie) for serie in resposta["series"]] == [4, 1]
+    assert [ponto["data"] for ponto in resposta["linha"]] == sorted(ponto["data"] for ponto in resposta["linha"])
+    # Saka (€20M em 2020) passa Haaland (€45M)? Não: ninguém troca de líder nesta linha do tempo.
+    assert resposta["viradas"] == []
+    assert cliente.get("/api/comparar?ids=1,2,5,8").status_code == 422  # no máximo 3
+    assert cliente.get("/api/comparar?ids=999999").status_code == 404
+
+
+def test_extremos_e_maquina_do_tempo(cliente):
+    extremos = cliente.get("/api/ligas/GB1/extremos").json()
+    assert set(extremos["extremos"]) == {"mais_velho", "mais_jovem", "mais_baixo", "mais_alto"}
+    assert extremos["extremos"]["mais_velho"]["nascimento"] == "2000-07-21" and extremos["arvore"]["grupo"]
+    assert cliente.get("/api/ligas/XX9/extremos").status_code == 404
+
+    maquina = cliente.get("/api/clubes/281/maquina?data=2020-06-01").json()
+    assert maquina["total"] == 45_000_000 and maquina["hoje"] == 200_000_000
+    assert maquina["jogadores"][0]["valor_na_data"] == 45_000_000 and maquina["alvo"] == "2019-12-16"
+    assert maquina["arvore"]["data"] and maquina["comparacoes"] > 0
+    antes = cliente.get("/api/clubes/281/maquina?data=2010-01-01").json()
+    assert antes["total"] == 0 and antes["com_valor"] == 0
+    assert cliente.get("/api/clubes/123456/maquina?data=2020-06-01").status_code == 404
+
+
 def test_clube(cliente):
     inter = cliente.get("/api/clubes/46").json()
     assert inter["nome"] == "Inter Milan" and inter["liga"]["id"] == "IT1"

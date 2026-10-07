@@ -8,6 +8,7 @@ Executar `python -m backend.dados.carregar` mostra um resumo da carga.
 """
 
 import csv
+import datetime
 import math
 import time
 from pathlib import Path
@@ -20,13 +21,13 @@ from ..estruturas.lista_mtf import ListaMTF
 from ..estruturas.lista_ordenada import ListaOrdenada
 from ..estruturas.lista_transposicao import ListaTransposicao
 from ..estruturas.lista_ponderada import ListaPonderada
-from ..estruturas.ordenacao import merge_sort
-from ..estruturas.rastro import RASTRO_NULO
+from ..estruturas.ordenacao import intercalar, merge_sort
+from ..estruturas.rastro import RASTRO_NULO, Rastro, rotulo
 from ..estruturas.skiplist import SkipList
 from ..estruturas.skiplist_valor import SkipListValor
 from ..estruturas.splay import ArvoreAfunilada
 from ..estruturas.splay_condicional import ArvoreAfuniladaCondicional
-from .modelos import Clube, Jogador, Liga, Transferencia, normalizar
+from .modelos import Clube, Jogador, Liga, Posicao, Transferencia, normalizar
 
 PASTA_DADOS = Path(__file__).resolve().parents[2] / "dados"
 
@@ -43,6 +44,14 @@ CRITERIOS_DE_AFINIDADE = (
 def valor_de_mercado(jogador):
     """Medida usada pela Skip List: jogadores sem valor contam como 0."""
     return jogador.valor or 0
+
+
+UM_MILHAO = 1_000_000
+
+
+def dia(iso):
+    """'2024-07-01' -> número do dia (chave numérica da janela de transferências)."""
+    return datetime.date.fromisoformat(iso).toordinal()
 
 
 def chave_por_valor(jogador):
@@ -95,6 +104,11 @@ class BaseDeDados:
         self.buscas = ListaMTF()  # termos buscados: movimentação para o início clássica
         # (grupo, -valor, id) -> Jogador ativo; um nó por critério de afinidade
         self.afinidades = ArvoreAVL()
+        # Segunda leva de ferramentas
+        self.posicoes = ListaMTF()  # posição -> Posicao, cada uma com sua Skip List (Exemplo 1 do enunciado)
+        self.janela = ListaOrdenada()  # dia·10⁶ + seq -> (id do jogador, nome, Transferencia)
+        self.por_idade = ArvoreAVL()  # (liga, nascimento, id) -> Jogador ativo
+        self.por_altura = ArvoreAVL()  # (liga, altura, id) -> Jogador ativo
         self.temporada_atual = None
         self.ligas_ignoradas = []
         self.tempos = []  # (etapa, segundos)
@@ -162,6 +176,79 @@ class BaseDeDados:
         if len(self.buscas) >= limite:
             self.buscas.remover_ultimo(rastro)
         self.buscas.inserir_no_inicio(termo, termo, rastro)
+
+    # ------------------------------------------------------- segunda leva
+    def posicao(self, posicao_id):
+        """Consulta sem reorganizar a lista de posições."""
+        return self.posicoes.consultar(posicao_id)
+
+    def transferencias_na_janela(self, de, ate, limite=30, rastro=None):
+        """Transferências com de <= data <= ate, da maior taxa para a menor.
+        Devolve (total, as `limite` maiores, comparações da busca binária,
+        comparações da busca por interpolação).
+
+        As transferências ficam numa lista ordenada pela data; duas buscas
+        acham os índices onde a janela começa e termina. A busca por
+        interpolação roda junto só para medir: como as datas se concentram
+        em janeiro e julho, ela costuma perder para a binária aqui."""
+        r = rastro if rastro is not None else Rastro(guardar=False)
+        chave_inicio = dia(de) * UM_MILHAO
+        chave_fim = (dia(ate) + 1) * UM_MILHAO
+        resto = Rastro(guardar=False)
+        inicio = self.janela.indice_teto(chave_inicio, r)  # só a primeira busca vai para a animação
+        fim = self.janela.indice_teto(chave_fim, resto)
+        interpolacao = Rastro(guardar=False)
+        self.janela.indice_teto_interpolacao(chave_inicio, interpolacao)
+        self.janela.indice_teto_interpolacao(chave_fim, interpolacao)
+        itens = [item for _, item in self.janela.fatia(inicio, fim)]
+        maiores = merge_sort(itens, chave=lambda item: -(item[2].taxa or 0))[:limite]
+        return max(0, fim - inicio), maiores, r.comparacoes + resto.comparacoes, interpolacao.comparacoes
+
+    def extremos_da_liga(self, liga_id, rastro=None):
+        """O mais velho, o mais jovem, o mais baixo e o mais alto da liga:
+        buscas da menor e da maior chave do grupo, nas árvores cuja chave
+        começa pela liga. O rastro registra as duas buscas por idade."""
+        r = rastro or RASTRO_NULO
+
+        def borda(arvore, nome, topo, tracar):
+            tracar.registrar("etapa", nome=nome)
+            # menor chave do grupo = teto de (liga,); maior = piso de (liga, topo)
+            par = arvore.teto((liga_id,), tracar) if topo is None else arvore.piso((liga_id, topo), tracar)
+            if par is None or par[0][0] != liga_id:
+                return None
+            tracar.registrar("encontrado", no=rotulo(par[0]))
+            return par[1]
+
+        return {
+            "mais_velho": borda(self.por_idade, "mais_velho", None, r),
+            "mais_jovem": borda(self.por_idade, "mais_jovem", "\uffff", r),
+            "mais_baixo": borda(self.por_altura, "mais_baixo", None, RASTRO_NULO),
+            "mais_alto": borda(self.por_altura, "mais_alto", math.inf, RASTRO_NULO),
+        }
+
+    def comparar(self, jogadores, rastro=None):
+        """Junta os históricos de vários jogadores numa única linha do tempo.
+        Cada histórico é uma árvore AVL; o percurso em ordem de cada uma já sai
+        por data, e a intercalação une os percursos sem ordenar nada.
+        Devolve (árvores, linha do tempo de triplas (data, índice do jogador, valor))."""
+        arvores = [self.historico(j.id) for j in jogadores]
+        return arvores, intercalar([a.em_ordem() for a in arvores], rastro)
+
+    def maquina_do_tempo(self, clube, data, rastro=None):
+        """Quanto valia, numa data passada, cada jogador do elenco atual: uma
+        busca de piso na árvore de histórico de cada um. Devolve (linhas
+        (jogador, valor, data da avaliação), comparações, árvore do primeiro).
+        O rastro registra a busca do jogador mais valioso."""
+        resto = Rastro(guardar=False)
+        linhas, primeira = [], None
+        for i, jogador in enumerate(merge_sort(clube.elenco, chave=lambda j: -valor_de_mercado(j))):
+            arvore = self.historico(jogador.id)
+            if i == 0:
+                primeira = arvore
+            par = arvore.valor_em(data, rastro if i == 0 and rastro is not None else resto)
+            linhas.append((jogador, par[1] if par else None, par[0] if par else None))
+        comparacoes = resto.comparacoes + (rastro.comparacoes if rastro is not None else 0)
+        return linhas, comparacoes, primeira
 
     def limpar_buscas(self, rastro=None):
         self.buscas.esvaziar(rastro)
@@ -345,6 +432,8 @@ class BaseDeDados:
             f"Splay de busca: {len(self.busca)} nós, altura {self.busca.altura()}",
             f"Árvore por valor: {len(self.por_valor)} jogadores, altura {self.por_valor.altura()}",
             f"Árvore de afinidades: {len(self.afinidades)} nós, altura {self.afinidades.altura()}",
+            f"Posições: {len(self.posicoes)} | árvores de extremos: {len(self.por_idade)} por idade, "
+            f"{len(self.por_altura)} por altura | janela de transferências: {len(self.janela)}",
         ]
         for _, liga in self.ligas:
             linhas.append(
@@ -371,6 +460,8 @@ def carregar(pasta=PASTA_DADOS):
     medir("busca", _montar_busca)
     medir("por valor", _montar_por_valor)
     medir("afinidades", _montar_afinidades)
+    medir("posições", _montar_posicoes)
+    medir("extremos", _montar_extremos)
     medir("valores", _carregar_valores)
     medir("transferências", _carregar_transferencias)
     return base
@@ -521,6 +612,48 @@ def _montar_por_valor(base, pasta):
     base.minha_lista = SkipListValor(valor_de_mercado, limiares=limiares)
 
 
+def _montar_posicoes(base, pasta):
+    """Lista de posições (movimentação para o início), cada uma com a Skip
+    List dos jogadores ativos daquela posição — o Exemplo 1 do enunciado."""
+    grupos = ListaOrdenada()  # posição -> lista indexada de pares (chave, Jogador)
+    for _, jogador in base.jogadores:
+        if not jogador.ativo or not jogador.sub_posicao:
+            continue
+        grupo = grupos.buscar(jogador.sub_posicao)
+        if grupo is None:
+            grupo = []
+            grupos.inserir(jogador.sub_posicao, grupo)
+        grupo.append((jogador.chave, jogador))
+    montadas = []
+    for semente, (posicao_id, grupo) in enumerate(grupos):
+        posicao = Posicao(posicao_id)
+        posicao.jogadores = len(grupo)
+        posicao.valor_total = sum(valor_de_mercado(j) for _, j in grupo)
+        posicao.skip = SkipListValor.construir(grupo, medida=valor_de_mercado)
+        posicao.skip_classica = SkipList(semente=100 + semente)
+        for chave, jogador in grupo:
+            posicao.skip_classica.inserir(chave, jogador)
+        montadas.append(posicao)
+    for posicao in merge_sort(montadas, chave=lambda p: -p.jogadores):
+        base.posicoes.inserir(posicao.id, posicao)
+
+
+def _montar_extremos(base, pasta):
+    """Árvores por idade e por altura, com a liga no começo da chave: o mais
+    velho e o mais jovem (ou o mais baixo e o mais alto) de uma liga são a
+    menor e a maior chave do grupo dela."""
+    idade, altura = [], []
+    for _, jogador in base.jogadores:
+        if not jogador.ativo or not jogador.liga_id or base.liga(jogador.liga_id) is None:
+            continue
+        if jogador.nascimento:
+            idade.append(((jogador.liga_id, jogador.nascimento, jogador.id), jogador))
+        if jogador.altura and jogador.altura >= 150:  # descarta alturas inválidas da base
+            altura.append(((jogador.liga_id, jogador.altura, jogador.id), jogador))
+    base.por_idade.construir_de_ordenados(merge_sort(idade, chave=lambda par: par[0]))
+    base.por_altura.construir_de_ordenados(merge_sort(altura, chave=lambda par: par[0]))
+
+
 def _montar_afinidades(base, pasta):
     """Árvore de afinidades: cada jogador ativo entra uma vez por critério,
     com a chave (grupo, -valor, id)."""
@@ -548,17 +681,23 @@ def _carregar_transferencias(base, pasta):
     i_id, i_data, i_temp = col("player_id"), col("transfer_date"), col("transfer_season")
     i_de, i_para = col("from_club_id"), col("to_club_id")
     i_de_nome, i_para_nome = col("from_club_name"), col("to_club_name")
-    i_taxa, i_valor = col("transfer_fee"), col("market_value_in_eur")
-    pares = []
+    i_taxa, i_valor, i_nome = col("transfer_fee"), col("market_value_in_eur"), col("player_name")
+    pares, por_data = [], []
     with arquivo:
         # seq (número da linha) desempata transferências do mesmo jogador na mesma data.
         for seq, linha in enumerate(leitor):
-            pares.append(((int(linha[i_id]), _data(linha[i_data]) or "", seq), Transferencia(
+            transferencia = Transferencia(
                 _data(linha[i_data]), linha[i_temp], _inteiro(linha[i_de]), linha[i_de_nome],
                 _inteiro(linha[i_para]), linha[i_para_nome], _inteiro(linha[i_taxa]),
                 _inteiro(linha[i_valor]),
-            )))
+            )
+            pares.append(((int(linha[i_id]), transferencia.data or "", seq), transferencia))
+            if transferencia.data:
+                # Chave numérica: o dia, com o número da linha para desempatar.
+                por_data.append((dia(transferencia.data) * UM_MILHAO + seq,
+                                 (int(linha[i_id]), linha[i_nome], transferencia)))
     base.transferencias = ListaOrdenada.construir(pares)
+    base.janela = ListaOrdenada.construir(por_data)
 
 
 if __name__ == "__main__":

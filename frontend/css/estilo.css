@@ -330,6 +330,22 @@ main { padding: var(--e5) 0 var(--e6); }
   .so-estreito { display: none; }
 }
 
+/* extremos da liga (recordes), comparação e trocas de liderança */
+.recordes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e4); margin-top: var(--e3); }
+.recorde { display: flex; align-items: center; gap: var(--e1); min-width: 0; }
+.recorde .nome { font-weight: 700; line-height: 1.2; }
+.recorde:hover .nome { text-decoration: underline; text-underline-offset: 3px; }
+.escolhidos { display: flex; flex-wrap: wrap; gap: var(--e1); margin: var(--e3) 0 var(--e2); }
+.escolhidos:empty { margin: var(--e2) 0 0; }
+.escolhido { display: inline-flex; align-items: center; gap: var(--e1); padding: 4px 4px 4px var(--e2); border: 1px solid var(--borda); border-radius: 999px; }
+.escolhido button {
+  width: 24px; height: 24px; border: 0; border-radius: 50%; background: none; cursor: pointer;
+  color: var(--tinta-2); font-size: var(--t3); line-height: 1; transition: background-color var(--rapida), color var(--rapida);
+}
+.escolhido button:hover { background: var(--superficie); color: var(--tinta); }
+.viradas { list-style: none; margin: 0; padding: 0; display: grid; }
+.viradas li { padding: var(--e1) 0; border-bottom: 1px solid var(--borda); }
+
 /* atalhos de faixa, campo "ir para" e itens da lista */
 .atalhos { display: flex; flex-wrap: wrap; gap: var(--e1); margin-top: var(--e2); }
 .ir-para { flex: 1 1 240px; max-width: 320px; }
@@ -442,6 +458,12 @@ main { padding: var(--e5) 0 var(--e6); }
 .no-arvore.atual circle { stroke: var(--acao); stroke-width: 3.5; }
 .no-arvore.alvo circle { fill: var(--tinta); stroke: var(--tinta); }
 .no-arvore.atual text, .no-arvore.alvo text { fill: var(--tinta); font-weight: 700; }
+.rotulo-fileira { font-size: 10px; }
+.ponto-serie { stroke: var(--tinta); stroke-width: 1.2; transition: transform 420ms ease; }
+.serie-0 { fill: var(--tinta); }
+.serie-1 { fill: var(--controle); }
+.serie-2 { fill: var(--fundo); }
+.ponto-serie.atual { stroke: var(--acao); stroke-width: 3; }
 .faixa-vetor { transition: opacity 300ms ease; }
 .faixa-vetor rect { fill: var(--controle); }
 .faixa-vetor.atual rect { fill: var(--acao); }
@@ -477,6 +499,7 @@ main { padding: var(--e5) 0 var(--e6); }
   .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e3) var(--e2); }
   .ligas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cabecalho .escudo-grande { width: 64px; height: 64px; }
+  .so-largo { display: none; }
   /* tabela de transferências: cabe em 360px mesmo com nomes de clube longos */
   .transferencias { font-size: var(--t5); }
   .transferencias th, .transferencias td { padding-right: var(--e1); }

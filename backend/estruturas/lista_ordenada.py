@@ -44,8 +44,51 @@ class ListaOrdenada:
             else:
                 inf = meio + 1
                 decisao = "direita"
-            rastro.registrar("compara", meio=meio, no=rotulo(chave_meio), decisao=decisao)
+            rastro.registrar("compara", meio=meio, no=rotulo(chave_meio), decisao=decisao,
+                             restam=sup - inf + 1)
         return resposta
+
+    def indice_teto(self, chave, rastro=None):
+        """Busca binária: menor índice cuja chave é >= chave (len se não houver)."""
+        return self._indice_teto(chave, rastro or RASTRO_NULO)
+
+    def indice_teto_interpolacao(self, chave, rastro=None):
+        """Busca por interpolação (só para chaves numéricas): em vez do meio,
+        sonda a posição estimada pela proporção entre a chave e os extremos:
+
+            pos = inf + (chave − chave[inf]) · (sup − inf) / (chave[sup] − chave[inf])
+
+        Com chaves uniformemente distribuídas o custo esperado é
+        θ(log log n); com chaves concentradas pode degradar até θ(n).
+        Cada passo faz três comparações de chave (as duas dos extremos e a da
+        posição sondada), todas contadas no rastro."""
+        r = rastro or RASTRO_NULO
+        chaves = self.chaves
+        inf, sup = 0, len(chaves) - 1
+        resposta = len(chaves)
+        while inf <= sup:
+            r.registrar("compara", meio=inf, no=rotulo(chaves[inf]), decisao="limite", restam=sup - inf + 1)
+            if chaves[inf] >= chave:
+                resposta = inf
+                break
+            r.registrar("compara", meio=sup, no=rotulo(chaves[sup]), decisao="limite", restam=sup - inf + 1)
+            if chaves[sup] < chave:
+                break
+            # Aqui chaves[inf] < chave <= chaves[sup], logo o divisor é positivo.
+            pos = inf + (chave - chaves[inf]) * (sup - inf) // (chaves[sup] - chaves[inf])
+            if chaves[pos] >= chave:
+                resposta = pos
+                sup = pos - 1
+                decisao = "esquerda"
+            else:
+                inf = pos + 1
+                decisao = "direita"
+            r.registrar("compara", meio=pos, no=rotulo(chaves[pos]), decisao=decisao, restam=max(0, sup - inf + 1))
+        return resposta
+
+    def fatia(self, inicio, fim):
+        """Pares (chave, valor) dos índices inicio..fim−1."""
+        return [(self.chaves[i], self.valores[i]) for i in range(max(0, inicio), min(fim, len(self.chaves)))]
 
     def buscar(self, chave, rastro=None):
         """Busca binária. Retorna o valor associado à chave ou None."""

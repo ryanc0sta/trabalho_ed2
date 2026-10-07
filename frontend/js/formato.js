@@ -22,6 +22,9 @@ const ICONES = {
   repetir: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>',
   linear: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
   hierarquica: '<rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/>',
+  posicoes: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+  transferencias: '<path d="M8 3 4 7l4 4"/><path d="M4 7h16"/><path d="m16 21 4-4-4-4"/><path d="M20 17H4"/>',
+  comparar: '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
   certo: '<path d="M20 6 9 17l-5-5"/>',
 };
 export const icone = (nome) =>
@@ -57,11 +60,21 @@ export function nomeDoNo(no) {
   const texto = String(no);
   if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return formatarData(texto);
   if (/^\d+\|\d+$/.test(texto)) return formatarValor(Number(texto.split("|")[0])); // (valor, id)
+  if (/^\d{12,}$/.test(texto)) { // chave da janela de transferências: dia·10⁶ + sequência
+    const dia = Math.floor(Number(texto) / 1e6);
+    return formatarData(new Date((dia - 719163) * 86400000).toISOString().slice(0, 10));
+  }
   return texto.split("|")[0];
 }
 
 // ------------------------------------------------------ frases dos passos
 const DIRECAO = { esquerda: "desce à esquerda", direita: "desce à direita", igual: "é igual — achou" };
+
+const ETAPAS_EM_TEXTO = {
+  ate: "quantos valem até o máximo da faixa", de: "quantos valem menos que o mínimo", pagina: "seleção da página",
+  maior: "busca do maior valor", clube: "mesmo clube", liga: "mesma posição e liga", pais: "mesmo país e posição",
+  mais_velho: "o mais velho da liga", mais_jovem: "o mais jovem da liga",
+};
 
 /** Frase em português para um passo do rastro. */
 export function descreverPasso(p) {
@@ -77,7 +90,7 @@ export function descreverPasso(p) {
           : `Nível ${p.nivel}: ${p.no === "sentinela" ? "chegou ao sentinela" : `“${no}” não é menor`} — desce`;
       }
       if (p.posicao !== undefined) return `Posição ${p.posicao}: compara com “${no}” — ${p.igual ? "achou" : "não é"}`;
-      if (p.meio !== undefined) return `Busca binária: meio = ${p.meio} (“${no}”), segue à ${p.decisao}`;
+      if (p.meio !== undefined) return `Busca binária: meio = ${p.meio.toLocaleString("pt-BR")} (“${no}”), segue à ${p.decisao}${p.restam !== undefined ? ` — restam ${p.restam.toLocaleString("pt-BR")}` : ""}`;
       if (p.decisao === "visita") return `Visita ${no} (percurso em ordem)`;
       return `Compara com “${no}”: ${DIRECAO[p.decisao] || p.decisao}`;
     case "inicio": return `Começa na cabeça, no nível ${p.nivel}`;
@@ -113,6 +126,11 @@ export function descreverPasso(p) {
     case "contagem": return `Diferença entre as duas posições: ${p.quantidade} na faixa`;
     case "percorre_intervalo": return `Percorre os ${p.nos} jogadores da faixa, um a um, para contar`;
     case "vizinhos": return `${p.sentido === "sucessores" ? "Sucessores (mais caros)" : "Predecessores (mais baratos)"}: ${p.quantidade} da mesma posição entre ${p.visitados} vizinhos`;
+    case "etapa": return `— ${ETAPAS_EM_TEXTO[p.nome] || p.nome} —`;
+    case "maiores": return `Do maior, anda pelos vizinhos: ${p.quantidade} jogadores, já em ordem`;
+    case "grupo": return `Pega ${p.quantidade} do grupo, andando pelos vizinhos`;
+    case "esvazia": return `Solta o primeiro elemento: os ${p.quantidade} itens saem de uma vez`;
+    case "intercala": return `Entra na linha do tempo a avaliação de ${no} (${p.fonte + 1}º jogador)`;
     default: return `${p.passo} ${p.no ? no : ""}`;
   }
 }

@@ -2,11 +2,11 @@
 // Cada adição e remoção é uma inserção/remoção ao vivo numa lista com saltos
 // (os passos aparecem nos Bastidores).
 
-import { api } from "./api.js?v=5";
+import { api } from "./api.js?v=6";
 import {
   atualizarLateral, cardJogador, esqueletos, formatarValor, iniciarPagina, mostrarErro,
   registrarOperacao, selo,
-} from "./comum.js?v=5";
+} from "./comum.js?v=6";
 
 iniciarPagina();
 
