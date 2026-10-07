@@ -382,7 +382,7 @@ export async function montarFrequentes(elemento, secao) {
     const { jogadores } = await api.frequentes();
     secao?.classList.toggle("oculto", !jogadores.length);
     elemento.innerHTML = jogadores.map((j) => `
-      <a class="frequente" href="jogador.html?id=${j.id}">${fotoHTML(j.foto, j.nome, "avatar")}${esc(j.nome)}</a>`).join("");
+      <a class="frequente" href="jogador.html?id=${j.id}">${fotoHTML(j.foto, j.nome, "avatar")}<span class="nome">${esc(j.nome)}</span></a>`).join("");
   } catch {
     secao?.classList.add("oculto");
   }

@@ -99,6 +99,9 @@ button, input { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; border-radius: var(--raio); }
 ::selection { background: var(--foco); }
 
+/* barras de rolagem discretas, nas cores do tema (fileiras horizontais e painel) */
+.carrossel, .bastidores .corpo { scrollbar-width: thin; scrollbar-color: var(--controle) transparent; }
+
 /* ------------------------------------------------------------------ ícones */
 .icone { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -133,7 +136,7 @@ button, input { font: inherit; color: inherit; }
 /* ------------------------------------------------------------------- topo */
 .topo { position: sticky; top: 0; z-index: 20; background: var(--fundo); border-bottom: 1px solid var(--borda); }
 .topo .container { display: flex; align-items: center; gap: var(--e2); height: 64px; }
-.marca { font-family: var(--titulo); font-stretch: 75%; font-weight: 700; font-size: var(--t3); letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
+.marca { flex: none; font-family: var(--titulo); font-stretch: 75%; font-weight: 700; font-size: var(--t3); letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
 .topo .busca { flex: 1; max-width: 400px; margin-left: auto; }
 .topo .acoes { display: flex; gap: var(--e1); margin-left: auto; }
 .topo .busca + .acoes { margin-left: 0; }
@@ -162,7 +165,9 @@ button, input { font: inherit; color: inherit; }
 .sugestao.vazia { color: var(--tinta-2); cursor: default; }
 
 /* ----------------------------------------------------------------- avatar */
-.avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--superficie); flex: none; }
+/* max-width: none — com o max-width: 100% geral das imagens, o Firefox trata a foto como
+   largura mínima zero e encolhe o item que a contém */
+.avatar { width: 40px; height: 40px; max-width: none; border-radius: 50%; object-fit: cover; object-position: top; background: var(--superficie); flex: none; }
 .sem-foto {
   display: flex; align-items: center; justify-content: center; background: var(--superficie);
   color: var(--tinta-2); font-family: var(--titulo); font-stretch: 75%; font-weight: 700;
@@ -214,10 +219,17 @@ main { padding: var(--e5) 0 var(--e6); }
 
 .esqueleto { background: var(--superficie); border-radius: var(--raio); animation: piscar 1.2s ease-in-out infinite; }
 
-/* fileira de avatares (frequentes) */
-.frequentes { display: flex; gap: var(--e2); overflow-x: auto; padding-bottom: var(--e1); }
-.frequente { display: flex; align-items: center; gap: var(--e1); padding-right: var(--e2); white-space: nowrap; font-weight: 700; transition: color var(--rapida); }
-.frequente:hover { color: var(--acao); }
+/* jogadores vistos: fichas que quebram de linha — nada fica escondido ou cortado.
+   max-width + reticências no nome garantem que uma ficha nunca invade a vizinha. */
+.frequentes { display: flex; flex-wrap: wrap; gap: var(--e1); }
+.frequente {
+  flex: none; max-width: 100%; display: flex; align-items: center; gap: var(--e1);
+  padding: 4px var(--e2) 4px 4px; border: 1px solid var(--borda); border-radius: 999px;
+  font-weight: 700; transition: border-color var(--rapida), background-color var(--rapida);
+}
+.frequente:hover { border-color: var(--controle); background: var(--superficie); }
+.frequente .avatar { width: 32px; height: 32px; }
+.frequente .nome { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* --------------------------------------------------------------- cabeçalho */
 .cabecalho { display: flex; align-items: center; gap: var(--e3); }
@@ -316,4 +328,5 @@ main { padding: var(--e5) 0 var(--e6); }
   .ligas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cabecalho .escudo-grande { width: 64px; height: 64px; }
   .transferencias .opcional { display: none; }
+  .frequente:nth-child(n + 7) { display: none; } /* no celular, só os 6 mais vistos */
 }

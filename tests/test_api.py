@@ -17,6 +17,9 @@ def test_saude_e_frontend(cliente):
     assert cliente.get("/api/saude").json() == {"status": "ok", "dados_carregados": True}
     resposta = cliente.get("/")
     assert resposta.status_code == 200 and "Scout Explorer" in resposta.text
+    # O navegador deve sempre revalidar os arquivos do frontend (evita CSS/JS antigos).
+    assert resposta.headers["cache-control"] == "no-cache"
+    assert cliente.get("/css/estilo.css").headers["cache-control"] == "no-cache"
 
 
 def test_ligas_e_acesso(cliente):

@@ -319,4 +319,15 @@ async def detalhar_clube(request: Request, clube_id: int):
 
 
 # Montado por último para não encobrir as rotas /api.
-app.mount("/", StaticFiles(directory=RAIZ / "frontend", html=True), name="frontend")
+class Estaticos(StaticFiles):
+    """Arquivos do frontend com "Cache-Control: no-cache": o navegador guarda os
+    arquivos, mas sempre confere com o servidor se mudaram (resposta 304 quando
+    não). Sem isso, um CSS ou JS antigo podia continuar em uso após uma mudança."""
+
+    async def get_response(self, path, scope):
+        resposta = await super().get_response(path, scope)
+        resposta.headers["Cache-Control"] = "no-cache"
+        return resposta
+
+
+app.mount("/", Estaticos(directory=RAIZ / "frontend", html=True), name="frontend")
