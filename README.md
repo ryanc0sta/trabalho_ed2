@@ -26,6 +26,19 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | `liga.html?id=GB1` | Slider de profundidade sobre os níveis da Skip List, cards paginados |
 | `jogador.html?id=418560` | Ficha, gráfico do histórico, valor numa data (piso) e pico no período (AVL aumentada), transferências |
 | `clube.html?id=281` | Ficha e elenco |
+| `faixa.html` | Jogadores numa faixa de valor: contagem, extremos (piso e teto) e páginas |
+| `lista.html` | Minha lista: jogadores guardados, com inserção e remoção ao vivo |
+
+### Ferramentas e o que cada uma exercita
+
+| Ferramenta | Onde | Estrutura e operação |
+|---|---|---|
+| Minha lista | botão na página do jogador + `lista.html` | Skip List: **inserção e remoção** (nível pelo valor, larguras atualizadas) |
+| Buscas recentes | barra lateral | Lista com **movimentação para o início clássica** (inserção no início, remoção do último) |
+| Faixa de valor | `faixa.html` | AVL por valor: **intervalo**, **piso**, **teto** e contagem pelo tamanho da subárvore |
+| Ir para um nome | página da liga | Skip List: **busca de teto** + **busca dedilhada** ao digitar letra a letra |
+| Parecidos | página do jogador | AVL por valor: **sucessores e predecessores** |
+| Vistos por você | barra lateral | Lista com transposição |
 
 O painel **Bastidores** (botão no topo) mostra os passos de cada operação e permite trocar
 entre a versão modificada e a clássica das estruturas.
@@ -64,6 +77,8 @@ entre a versão modificada e a clássica das estruturas.
 | `skiplist_valor.py` | `skiplist.py` | Ordem pelo nome, nível pelo ranking de valor (sem moeda) + larguras para posição/paginação |
 | `splay_condicional.py` | `splay.py` | Só afunila depois de K acessos ao mesmo nó |
 | `avl_aumentada.py` | `avl.py` | Cada nó guarda o máximo da subárvore: pico de valor num período em θ(log n) |
+| `avl_ordem.py` | `avl.py` | Cada nó guarda o tamanho da subárvore: contar e paginar uma faixa de valor em θ(log n) |
+| `skiplist_valor.py` (busca dedilhada) | `skiplist.py` | `posicao_teto` parte de onde a busca anterior parou quando o alvo está perto |
 
 ## API (backend/api.py)
 
@@ -82,3 +97,8 @@ Rotas com `modo` aceitam `modificado` (padrão) ou `classico`. As que executam u
 | `GET /api/frequentes` | Lista com transposição |
 | `GET /api/jogadores/{id}` · `/valor?data=` · `/pico?de=&ate=` | AVL aumentada do histórico |
 | `GET /api/clubes/{id}` | AVL de clubes |
+| `GET /api/minha-lista` · `PUT`/`DELETE /api/minha-lista/{id}` | Skip List: inserção e remoção |
+| `POST /api/buscas?q=` · `GET /api/lateral` | Lista com movimentação para o início; dados da barra lateral |
+| `GET /api/faixa?minimo=&maximo=` | AVL por valor com tamanho da subárvore |
+| `GET /api/ligas/{id}/ir-para?q=` | Skip List: teto + busca dedilhada |
+| `GET /api/jogadores/{id}/parecidos` | AVL por valor: vizinhos em ordem |

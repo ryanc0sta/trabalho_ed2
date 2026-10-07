@@ -52,6 +52,7 @@ class SkipListValor(SkipList):
         self.medida = medida
         self.limiares = list(limiares or [])
         self.cabeca.largura = [1] * (nivel_max + 1)  # lista vazia: sentinela na posição 1
+        self._dedo = None  # (chave, aux, pos) da última busca de teto
 
     def _novo_no(self, chave, valor, nivel):
         return NoSkipLargura(chave, valor, nivel)
@@ -107,13 +108,11 @@ class SkipListValor(SkipList):
         return min(nivel, self.nivel_max)
 
     # ------------------------------------------------------------- auxiliares
-    def _descer_com_posicao(self, chave, rastro):
-        """Como `_descer`, mas também devolve a posição do último nó de cada nível."""
-        aux = [self.cabeca] * (self.nivel_max + 1)
-        pos = [0] * (self.nivel_max + 1)
-        p, posicao = self.cabeca, 0
-        rastro.registrar("inicio", nivel=self.nivel)
-        for i in range(self.nivel, -1, -1):
+    def _descer_niveis(self, chave, p, posicao, nivel_inicial, aux, pos, rastro):
+        """Desce de `nivel_inicial` até o nível 0 a partir do nó `p`, avançando
+        enquanto a próxima chave for menor e somando as larguras saltadas.
+        Atualiza aux/pos (último nó e sua posição em cada nível)."""
+        for i in range(nivel_inicial, -1, -1):
             while True:
                 proximo = p.prox[i]
                 if proximo is self.sentinela:
@@ -128,7 +127,59 @@ class SkipListValor(SkipList):
                     rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="desce")
                     break
             aux[i], pos[i] = p, posicao
+        return p
+
+    def _descer_com_posicao(self, chave, rastro):
+        """Como `_descer`, mas também devolve a posição do último nó de cada nível."""
+        aux = [self.cabeca] * (self.nivel_max + 1)
+        pos = [0] * (self.nivel_max + 1)
+        rastro.registrar("inicio", nivel=self.nivel)
+        p = self._descer_niveis(chave, self.cabeca, 0, self.nivel, aux, pos, rastro)
         return p, aux, pos
+
+    def posicao_teto(self, chave, rastro=None):
+        """Tripla (posição 1..n, chave, valor) da menor chave >= `chave`, ou None.
+
+        A posição sai da soma das larguras: θ(log n). Além disso, a busca é
+        DEDILHADA: guarda-se onde a busca anterior parou (o "dedo": o último
+        nó de cada nível) e, se a nova chave vier logo depois, a busca
+        recomeça dali, subindo só os níveis necessários.
+
+        Partir do dedo custa cerca de 2·log(distância): compensa para alvos
+        próximos, mas seria pior que partir da cabeça (log n) para alvos
+        distantes. Por isso, antes de usar o dedo, UMA comparação no nível do
+        meio decide: se o próximo nó desse nível já passa da chave, o alvo
+        está perto; senão, a busca recomeça da cabeça."""
+        r = rastro or RASTRO_NULO
+        dedo = self._dedo
+        usar_dedo = False
+        if dedo is not None and chave >= dedo[0]:
+            meio = self.nivel // 2
+            marco = dedo[1][meio].prox[meio]
+            usar_dedo = marco is self.sentinela or marco.chave >= chave
+            r.registrar("compara", no="sentinela" if marco is self.sentinela else rotulo(marco.chave),
+                        nivel=meio, decisao="perto" if usar_dedo else "longe")
+        if usar_dedo:
+            aux, pos = list(dedo[1]), list(dedo[2])
+            i = 0
+            while i < meio:  # sobe enquanto o próximo do nível de cima ainda for menor
+                acima = aux[i + 1].prox[i + 1]
+                if acima is self.sentinela or acima.chave >= chave:
+                    break
+                r.registrar("compara", no=rotulo(acima.chave), nivel=i + 1, decisao="sobe")
+                i += 1
+            r.registrar("dedo", nivel=i, de=rotulo(dedo[0]))
+            p = self._descer_niveis(chave, aux[i], pos[i], i, aux, pos, r)
+        else:
+            p, aux, pos = self._descer_com_posicao(chave, r)
+        self._dedo = (chave, aux, pos)
+        alvo = p.prox[0]
+        if alvo is self.sentinela:
+            r.registrar("nao_encontrado", chave=rotulo(chave))
+            return None
+        posicao = pos[0] + p.largura[0]
+        r.registrar("encontrado", no=rotulo(alvo.chave), posicao=posicao)
+        return posicao, alvo.chave, alvo.valor
 
     # --------------------------------------------------------------- inserção
     def inserir(self, chave, valor, rastro=None):
@@ -159,6 +210,7 @@ class SkipListValor(SkipList):
             else:
                 aux[i].largura[i] += 1  # o ponteiro acima passa a saltar um nó a mais
         self.tamanho += 1
+        self._dedo = None  # a lista mudou: o dedo guardado não vale mais
         return True
 
     # ---------------------------------------------------------------- remoção
@@ -179,6 +231,7 @@ class SkipListValor(SkipList):
         while self.nivel > 0 and self.cabeca.prox[self.nivel] is self.sentinela:
             self.nivel -= 1
         self.tamanho -= 1
+        self._dedo = None  # a lista mudou: o dedo guardado não vale mais
         return True
 
     # ------------------------------------------------- consultas por posição

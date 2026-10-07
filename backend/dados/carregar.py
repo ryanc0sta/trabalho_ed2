@@ -8,16 +8,19 @@ Executar `python -m backend.dados.carregar` mostra um resumo da carga.
 """
 
 import csv
+import math
 import time
 from pathlib import Path
 
 from ..estruturas.avl import ArvoreAVL
 from ..estruturas.avl_aumentada import ArvoreAVLAumentada
+from ..estruturas.avl_ordem import ArvoreAVLOrdem
 from ..estruturas.lista_mtf import ListaMTF
 from ..estruturas.lista_ordenada import ListaOrdenada
 from ..estruturas.lista_transposicao import ListaTransposicao
 from ..estruturas.lista_ponderada import ListaPonderada
 from ..estruturas.ordenacao import merge_sort
+from ..estruturas.rastro import RASTRO_NULO
 from ..estruturas.skiplist import SkipList
 from ..estruturas.skiplist_valor import SkipListValor
 from ..estruturas.splay import ArvoreAfunilada
@@ -31,6 +34,11 @@ QUANTOS_AQUECER = 30  # jogadores mais valiosos já "em alta" quando o servidor 
 def valor_de_mercado(jogador):
     """Medida usada pela Skip List: jogadores sem valor contam como 0."""
     return jogador.valor or 0
+
+
+def chave_por_valor(jogador):
+    """Chave da árvore por valor: (valor, id) — o id desempata valores iguais."""
+    return (valor_de_mercado(jogador), jogador.id)
 
 
 # ---------------------------------------------------------------- conversões
@@ -71,6 +79,11 @@ class BaseDeDados:
         self.transferencias = ListaOrdenada()  # (id do jogador, data, seq) -> Transferencia
         # Jogadores frequentes do usuário: transposição (sobe uma posição por visita)
         self.frequentes = ListaTransposicao()
+        # Ferramentas da barra lateral
+        self.por_valor = ArvoreAVLOrdem()  # (valor, id) -> Jogador ativo com valor (modificação 5)
+        self.minha_lista = SkipListValor(valor_de_mercado)  # lista de observação do usuário
+        self.minha_lista_classica = SkipList(semente=7)
+        self.buscas = ListaMTF()  # termos buscados: movimentação para o início clássica
         self.temporada_atual = None
         self.ligas_ignoradas = []
         self.tempos = []  # (etapa, segundos)
@@ -110,6 +123,92 @@ class BaseDeDados:
             self.frequentes.remover(ultimo, rastro)
         self.frequentes.inserir(jogador.id, jogador, rastro)
 
+    # ---------------------------------------------------- ferramentas laterais
+    def na_lista(self, jogador):
+        return self.minha_lista.buscar(jogador.chave) is not None
+
+    def adicionar_a_lista(self, jogador, classica=False, rastro=None):
+        """Inserção ao vivo nas duas versões; o rastro é o da versão pedida."""
+        r = rastro or RASTRO_NULO
+        inseriu = self.minha_lista.inserir(jogador.chave, jogador, RASTRO_NULO if classica else r)
+        self.minha_lista_classica.inserir(jogador.chave, jogador, r if classica else RASTRO_NULO)
+        return inseriu
+
+    def remover_da_lista(self, jogador, classica=False, rastro=None):
+        r = rastro or RASTRO_NULO
+        removeu = self.minha_lista.remover(jogador.chave, RASTRO_NULO if classica else r)
+        self.minha_lista_classica.remover(jogador.chave, r if classica else RASTRO_NULO)
+        return removeu
+
+    def registrar_busca(self, termo, limite=8, rastro=None):
+        """Termo já buscado vai para o início (movimentação para o início);
+        termo novo entra no início e, se a lista estiver cheia, sai o último."""
+        termo = normalizar(termo)
+        if not termo:
+            return
+        if self.buscas.buscar(termo, rastro) is not None:
+            return
+        if len(self.buscas) >= limite:
+            self.buscas.remover_ultimo(rastro)
+        self.buscas.inserir_no_inicio(termo, termo, rastro)
+
+    def faixa_de_valor(self, minimo, maximo, pagina=1, por_pagina=24, classica=False, rastro=None):
+        """Jogadores ativos com minimo <= valor <= maximo, do mais caro ao mais
+        barato. Devolve (total, jogadores da página, mais barato, mais caro).
+
+        Modificada: o total sai de duas descidas (tamanho das subárvores) e a
+        página é selecionada pela posição — θ(log n) + tamanho da página.
+        Clássica: percorre toda a faixa para contar — θ(k)."""
+        r = rastro or RASTRO_NULO
+        de, ate = (minimo, -1), (maximo, math.inf)
+        arvore = self.por_valor
+        if classica:
+            todos = []
+            for chave, jogador in arvore.iterar_a_partir_de(de, r):
+                if chave > ate:
+                    break
+                todos.append(jogador)
+            r.comparacoes += len(todos)
+            r.registrar("percorre_intervalo", nos=len(todos))
+            total = len(todos)
+            todos.reverse()
+            jogadores = todos[(pagina - 1) * por_pagina: pagina * por_pagina]
+        else:
+            total = arvore.contar(de, ate, r)
+            inicio = arvore.posicao(de)
+            alto = inicio + total - (pagina - 1) * por_pagina  # posição logo após a página
+            baixo = max(inicio, alto - por_pagina)
+            jogadores = [j for _, j in arvore.fatia(baixo, alto - baixo, r)] if alto > baixo else []
+            jogadores.reverse()
+        mais_barato = arvore.teto(de)  # busca de teto: o primeiro a partir do mínimo
+        mais_caro = arvore.piso(ate)  # busca de piso: o último até o máximo
+        if total == 0:
+            mais_barato = mais_caro = None
+        return total, jogadores, mais_barato and mais_barato[1], mais_caro and mais_caro[1]
+
+    def parecidos(self, jogador, de_cada_lado=3, rastro=None):
+        """Jogadores da mesma posição com valor mais próximo: os vizinhos na
+        árvore por valor — sucessores (mais caros) e predecessores (mais baratos)."""
+        r = rastro or RASTRO_NULO
+        if not jogador.ativo or not jogador.valor:
+            return []
+        valor, jogador_id = chave_por_valor(jogador)
+
+        def colher(vizinhos, sentido):
+            achados, visitados = [], 0
+            for _, outro in vizinhos:
+                visitados += 1
+                if outro.posicao == jogador.posicao:
+                    achados.append(outro)
+                if len(achados) >= de_cada_lado or visitados >= 400:
+                    break
+            r.registrar("vizinhos", sentido=sentido, quantidade=len(achados), visitados=visitados)
+            return achados
+
+        acima = colher(self.por_valor.iterar_a_partir_de((valor, jogador_id + 1), r), "sucessores")
+        abaixo = colher(self.por_valor.iterar_antes_de((valor, jogador_id), r), "predecessores")
+        return acima[::-1] + abaixo  # do mais caro ao mais barato
+
     def ranking_na_liga(self, jogador):
         """Posição do jogador entre os ativos da liga, por valor de mercado."""
         liga = self.liga(jogador.liga_id) if jogador.ativo and jogador.liga_id else None
@@ -145,6 +244,7 @@ class BaseDeDados:
             f"Histórico de valores: {len(self.valores)} registros",
             f"Transferências: {len(self.transferencias)} registros",
             f"Splay de busca: {len(self.busca)} nós, altura {self.busca.altura()}",
+            f"Árvore por valor: {len(self.por_valor)} jogadores, altura {self.por_valor.altura()}",
         ]
         for _, liga in self.ligas:
             linhas.append(
@@ -169,6 +269,7 @@ def carregar(pasta=PASTA_DADOS):
     medir("clubes", _carregar_clubes)
     medir("ligas", _carregar_ligas)
     medir("busca", _montar_busca)
+    medir("por valor", _montar_por_valor)
     medir("valores", _carregar_valores)
     medir("transferências", _carregar_transferencias)
     return base
@@ -313,6 +414,20 @@ def _montar_busca(base, pasta):
         for i in range(len(palavras)):
             trechos.append(((" ".join(palavras[i:]), jogador_id), jogador))
     base.nomes = ListaOrdenada.construir(trechos)
+
+
+def _montar_por_valor(base, pasta):
+    """Árvore por valor (só ativos com valor) e limiares globais dos níveis,
+    usados pela lista de observação do usuário."""
+    pares = merge_sort([(chave_por_valor(j), j) for _, j in base.jogadores if j.ativo and j.valor],
+                       chave=lambda par: par[0])
+    base.por_valor.construir_de_ordenados(pares)
+    # Mesmo critério das ligas: o nível k exige estar entre os n/2^k mais valiosos.
+    n, limiares, k = len(pares), [], 1
+    while n // (2 ** k) >= 1:
+        limiares.append(pares[n - n // (2 ** k)][0][0])
+        k += 1
+    base.minha_lista = SkipListValor(valor_de_mercado, limiares=limiares)
 
 
 def _carregar_valores(base, pasta):

@@ -2,7 +2,7 @@
 // "Bastidores" — onde ficam os detalhes técnicos (passos de cada operação e a
 // escolha entre as versões modificada e clássica das estruturas).
 
-import { api, definirModo, modoAtual } from "./api.js";
+import { api, definirModo, modoAtual } from "./api.js?v=3";
 
 // ------------------------------------------------------------------ ícones
 // Conjunto único: Lucide (https://lucide.dev, licença ISC), embutido como SVG.
@@ -14,6 +14,12 @@ const ICONES = {
   lua: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
   sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   bastidores: '<rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/>',
+  menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
+  inicio: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  faixa: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+  marcador: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+  relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  certo: '<path d="M20 6 9 17l-5-5"/>',
 };
 export const icone = (nome) =>
   `<svg class="icone" viewBox="0 0 24 24" aria-hidden="true">${ICONES[nome]}</svg>`;
@@ -67,6 +73,7 @@ export function nomeDoNo(no) {
   if (no === null || no === undefined) return "—";
   const texto = String(no);
   if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return formatarData(texto);
+  if (/^\d+\|\d+$/.test(texto)) return formatarValor(Number(texto.split("|")[0])); // (valor, id)
   return texto.split("|")[0];
 }
 
@@ -161,6 +168,7 @@ function montarTopo({ busca = true } = {}) {
   topo.className = "topo";
   topo.innerHTML = `
     <div class="container">
+      <button class="botao icone-so" data-menu aria-label="Abrir ferramentas" aria-controls="lateral">${icone("menu")}</button>
       <a class="marca" href="index.html">Scout Explorer</a>
       ${busca ? `<div id="busca-topo"></div>` : ""}
       <div class="acoes">
@@ -201,7 +209,14 @@ export function montarBusca(caixa, { grande = false } = {}) {
   };
   const marcar = () => lista.querySelectorAll(".sugestao").forEach((el, i) =>
     el.setAttribute("aria-selected", String(i === selecionado)));
-  const abrir = (jogador) => { location.href = `jogador.html?id=${jogador.id}`; };
+  const abrir = async (jogador) => {
+    try {
+      await api.registrarBusca(entrada.value.trim()); // entra nas "buscas recentes"
+    } catch {
+      /* não impede a navegação */
+    }
+    location.href = `jogador.html?id=${jogador.id}`;
+  };
 
   entrada.addEventListener("input", () => {
     clearTimeout(espera);
@@ -337,6 +352,9 @@ export function descreverPasso(p) {
   const no = nomeDoNo(p.no);
   switch (p.passo) {
     case "compara":
+      if (p.decisao === "sobe") return `Nível ${p.nivel}: “${no}” ainda é menor — sobe um nível`;
+      if (p.decisao === "perto") return `Nível ${p.nivel}: o próximo marco (“${no}”) já passa do alvo — está perto, parte do dedo`;
+      if (p.decisao === "longe") return `Nível ${p.nivel}: o próximo marco (“${no}”) ainda é menor — está longe, recomeça da cabeça`;
       if (p.nivel !== undefined) {
         return p.decisao === "avanca"
           ? `Nível ${p.nivel}: “${no}” é menor — avança${p.largura ? ` (salta ${p.largura})` : ""}`
@@ -371,6 +389,14 @@ export function descreverPasso(p) {
     case "nivel_por_valor": return `Nível de “${no}” pelo valor: ${p.nivel}`;
     case "sorteio": return `Moeda sorteou o nível ${p.nivel} para “${no}”`;
     case "liga": return `Liga “${no}” no nível ${p.nivel}`;
+    case "desliga": return `Desliga “${no}” do nível ${p.nivel}`;
+    case "remove": return `Remove “${no}”`;
+    case "duplicada": return `“${no}” já está na estrutura`;
+    case "dedo": return `Parte do dedo, no nível ${p.nivel} (busca anterior: “${nomeDoNo(p.de)}”)`;
+    case "conta_subarvore": return `${no} e toda a sua subárvore esquerda são menores: soma ${p.quantidade} de uma vez (total ${p.total})`;
+    case "contagem": return `Diferença entre as duas posições: ${p.quantidade} na faixa`;
+    case "percorre_intervalo": return `Percorre os ${p.nos} jogadores da faixa, um a um, para contar`;
+    case "vizinhos": return `${p.sentido === "sucessores" ? "Sucessores (mais caros)" : "Predecessores (mais baratos)"}: ${p.quantidade} da mesma posição entre ${p.visitados} vizinhos`;
     default: return `${p.passo} ${p.no ? no : ""}`;
   }
 }
@@ -388,8 +414,73 @@ export async function montarFrequentes(elemento, secao) {
   }
 }
 
+// ------------------------------------------------------------ barra lateral
+const PAGINAS = [
+  { grupo: "Explorar", itens: [
+    { href: "index.html", icone: "inicio", texto: "Início" },
+    { href: "faixa.html", icone: "faixa", texto: "Faixa de valor" },
+  ] },
+  { grupo: "Seu espaço", itens: [
+    { href: "lista.html", icone: "marcador", texto: "Minha lista", contador: "minha_lista" },
+  ] },
+];
+
+function montarLateral() {
+  document.body.insertAdjacentHTML("beforeend", `<aside class="lateral" id="lateral" aria-label="Ferramentas"></aside>`);
+  const lateral = document.getElementById("lateral");
+  const veu = document.querySelector(".veu");
+  const abrirFechar = (abrir) => {
+    lateral.classList.toggle("aberta", abrir);
+    veu.classList.toggle("visivel", abrir);
+  };
+  document.querySelector("[data-menu]").addEventListener("click", () => abrirFechar(true));
+  veu.addEventListener("click", () => abrirFechar(false));
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") abrirFechar(false); });
+  renderizarLateral({ minha_lista: 0, buscas: [], vistos: [] });
+  atualizarLateral();
+}
+
+function renderizarLateral(dados) {
+  const lateral = document.getElementById("lateral");
+  if (!lateral) return;
+  const atual = location.pathname.split("/").pop() || "index.html";
+  lateral.innerHTML = `
+    <a class="marca" href="index.html">Scout Explorer</a>
+    ${PAGINAS.map((g) => `
+      <nav aria-label="${esc(g.grupo)}">
+        <h2>${esc(g.grupo)}</h2>
+        ${g.itens.map((i) => `
+          <a class="item" href="${i.href}" ${i.href === atual ? 'aria-current="page"' : ""}>
+            ${icone(i.icone)}<span class="texto">${esc(i.texto)}</span>
+            ${i.contador ? `<span class="num">${dados[i.contador]}</span>` : ""}
+          </a>`).join("")}
+      </nav>`).join("")}
+    ${dados.buscas.length ? `
+      <nav aria-label="Buscas recentes">
+        <h2>Buscas recentes</h2>
+        ${dados.buscas.map((termo) => `
+          <a class="item fino" href="index.html?q=${encodeURIComponent(termo)}">${icone("relogio")}<span class="texto">${esc(termo)}</span></a>`).join("")}
+      </nav>` : ""}
+    ${dados.vistos.length ? `
+      <nav aria-label="Vistos por você">
+        <h2>Vistos por você</h2>
+        ${dados.vistos.map((j) => `
+          <a class="item fino" href="jogador.html?id=${j.id}">${fotoHTML(j.foto, j.nome, "avatar")}<span class="texto">${esc(j.nome)}</span></a>`).join("")}
+      </nav>` : ""}`;
+}
+
+/** Recarrega os contadores e as listas da barra lateral. */
+export async function atualizarLateral() {
+  try {
+    renderizarLateral(await api.lateral());
+  } catch {
+    /* sem servidor: a barra fica só com os links */
+  }
+}
+
 // ------------------------------------------------------------------ página
 export function iniciarPagina(opcoes) {
   montarTopo(opcoes);
   montarBastidores();
+  montarLateral();
 }

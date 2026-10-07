@@ -1,7 +1,7 @@
 // Página do clube: ficha e elenco atual (clube encontrado na AVL de clubes).
 
-import { api } from "./api.js";
-import { cardJogador, esc, formatarValor, iniciarPagina, mostrarErro, parametro } from "./comum.js";
+import { api } from "./api.js?v=3";
+import { cardJogador, esc, formatarValor, iniciarPagina, mostrarErro, parametro } from "./comum.js?v=3";
 
 iniciarPagina();
 

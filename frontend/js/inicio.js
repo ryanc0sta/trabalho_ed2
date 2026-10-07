@@ -2,13 +2,21 @@
 // "Em alta" = topo da árvore de busca; "Ligas" = lista autoorganizável (as
 // mais visitadas sobem); "Vistos por você" = lista com transposição.
 
-import { api, modoAtual } from "./api.js";
+import { api, modoAtual } from "./api.js?v=3";
 import {
-  cardJogador, esc, esqueletos, iniciarPagina, montarBusca, montarFrequentes, mostrarErro,
-} from "./comum.js";
+  cardJogador, esc, esqueletos, iniciarPagina, montarBusca, montarFrequentes, mostrarErro, parametro,
+} from "./comum.js?v=3";
 
 iniciarPagina({ busca: false });
-montarBusca(document.getElementById("busca-principal"), { grande: true });
+const campoBusca = montarBusca(document.getElementById("busca-principal"), { grande: true });
+
+// Vindo de uma "busca recente" da barra lateral: refaz a busca.
+const termoInicial = parametro("q");
+if (termoInicial) {
+  campoBusca.value = termoInicial;
+  campoBusca.focus();
+  campoBusca.dispatchEvent(new Event("input"));
+}
 
 const elLigas = document.getElementById("ligas");
 const elAlta = document.getElementById("em-alta");

@@ -2,11 +2,11 @@
 // percorre os níveis da lista com saltos (cada nível tem metade dos jogadores
 // do anterior — os mais valiosos, na versão modificada).
 
-import { api, modoAtual } from "./api.js";
+import { api, modoAtual } from "./api.js?v=3";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
   registrarOperacao,
-} from "./comum.js";
+} from "./comum.js?v=3";
 
 iniciarPagina();
 
@@ -20,6 +20,7 @@ const POR_PAGINA = 24;
 let detalhe = null;
 let nivel = 0;
 let pagina = 1;
+let alvoId = null; // jogador a destacar depois de "Ir para um nome"
 
 const niveisDoModo = () => (modoAtual() === "modificado" ? detalhe.niveis : detalhe.niveis_classica);
 
@@ -59,9 +60,56 @@ function renderizarFiltro() {
       <span class="meta num" id="contagem-nivel"></span>
     </div>
     <input id="nivel" type="range" min="0" max="${maximo}" value="${nivel}">
-    <div class="extremos"><span>Todos</span><span>Só os destaques</span></div>`;
-  elFiltro.querySelector("input").addEventListener("input", (e) => mudarNivel(Number(e.target.value)));
+    <div class="extremos"><span>Todos</span><span>Só os destaques</span></div>
+    <div class="linha" style="margin-top:var(--e2)">
+      <div class="busca ir-para">
+        <div class="campo">${icone("busca")}
+          <input type="search" id="ir-para" placeholder="Ir para um nome" aria-label="Ir para um nome na lista da liga" autocomplete="off">
+        </div>
+      </div>
+      <span class="meta" id="aviso-ir-para" aria-live="polite"></span>
+    </div>`;
+  elFiltro.querySelector("#nivel").addEventListener("input", (e) => mudarNivel(Number(e.target.value)));
+  elFiltro.querySelector("#ir-para").addEventListener("input", (e) => {
+    clearTimeout(esperaIrPara);
+    const texto = e.target.value.trim();
+    esperaIrPara = setTimeout(() => irPara(texto), 180);
+  });
   atualizarRotulo();
+}
+
+// "Ir para um nome": acha o primeiro jogador a partir do texto digitado e abre
+// a página em que ele está. Digitar letra a letra faz buscas vizinhas, e cada
+// uma parte de onde a anterior parou (busca dedilhada).
+let esperaIrPara = null;
+async function irPara(texto) {
+  const aviso = document.getElementById("aviso-ir-para");
+  if (!texto) {
+    aviso.textContent = "";
+    return;
+  }
+  try {
+    const achado = await api.irPara(ligaId, texto, POR_PAGINA);
+    registrarOperacao({
+      titulo: `Ir para “${texto}” em ${detalhe.nome}`,
+      estrutura: "Lista com saltos · busca de teto",
+      rastro: achado.rastro,
+      resumo: achado.posicao ? [`posição ${achado.posicao} de ${detalhe.jogadores}`] : [],
+    });
+    if (!achado.posicao) {
+      aviso.textContent = `Nenhum nome a partir de “${texto}”.`;
+      return;
+    }
+    aviso.textContent = `${achado.jogador.nome} · ${achado.posicao}º em ordem alfabética`;
+    alvoId = achado.jogador.id;
+    nivel = 0; // a ordem alfabética completa é a do nível "Todos"
+    pagina = achado.pagina;
+    elFiltro.querySelector("#nivel").value = 0;
+    atualizarRotulo();
+    carregarJogadores();
+  } catch (erro) {
+    aviso.textContent = erro.message;
+  }
 }
 
 function atualizarRotulo() {
@@ -94,6 +142,12 @@ async function carregarJogadores() {
       ? dados.jogadores.map((j, i) => cardJogador(j, i)).join("")
       : `<p class="vazio">Nenhum jogador aqui.</p>`;
     renderizarPaginacao(dados);
+    if (alvoId !== null) {
+      const alvo = elJogadores.querySelector(`a[href="jogador.html?id=${alvoId}"]`);
+      alvo?.classList.add("alvo");
+      alvo?.scrollIntoView({ behavior: "smooth", block: "center" });
+      alvoId = null;
+    }
     registrarOperacao({
       titulo: `${detalhe.nome}: nível ${dados.nivel}, página ${dados.pagina}`,
       estrutura: "Lista com saltos",

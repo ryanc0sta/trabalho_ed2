@@ -123,6 +123,70 @@ def test_jogador_historico_valor_e_pico(cliente):
     assert cliente.get("/api/jogadores/999999").status_code == 404
 
 
+def test_minha_lista_insere_e_remove(cliente):
+    assert cliente.get("/api/minha-lista").json()["total"] == 0
+    resposta = cliente.put("/api/minha-lista/1").json()
+    assert resposta["adicionado"] and resposta["total"] == 1
+    passos = [p["passo"] for p in resposta["rastro"]["passos"]]
+    assert "nivel_por_valor" in passos and "liga" in passos
+    assert not cliente.put("/api/minha-lista/1").json()["adicionado"]  # já estava
+    cliente.put("/api/minha-lista/5?modo=classico")
+    lista = cliente.get("/api/minha-lista").json()
+    assert [j["nome"] for j in lista["jogadores"]] == ["Erling Haaland", "Nicolò Barella"]  # ordem alfabética
+    assert lista["valor_total"] == 270_000_000
+    assert cliente.get("/api/minha-lista?modo=classico").json()["total"] == 2
+    assert cliente.get("/api/jogadores/1").json()["na_lista"] is True
+    assert cliente.get("/api/lateral").json()["minha_lista"] == 2
+
+    resposta = cliente.delete("/api/minha-lista/1").json()
+    assert resposta["removido"] and resposta["total"] == 1
+    assert "desliga" in [p["passo"] for p in resposta["rastro"]["passos"]]
+    assert not cliente.delete("/api/minha-lista/1").json()["removido"]
+    assert cliente.get("/api/jogadores/1").json()["na_lista"] is False
+    cliente.delete("/api/minha-lista/5")
+
+
+def test_buscas_recentes_movem_para_o_inicio(cliente):
+    for termo in ("haal", "Saka", "barella"):
+        cliente.post(f"/api/buscas?q={termo}")
+    assert cliente.get("/api/lateral").json()["buscas"] == ["barella", "saka", "haal"]
+    resposta = cliente.post("/api/buscas?q=HAAL").json()  # repetido: vai para o início
+    assert resposta["buscas"] == ["haal", "barella", "saka"]
+    assert resposta["rastro"]["passos"][-1]["passo"] == "move_inicio"
+
+
+def test_faixa_de_valor(cliente):
+    for modo in ("modificado", "classico"):
+        faixa = cliente.get(f"/api/faixa?minimo=100000&maximo=130000000&modo={modo}").json()
+        assert faixa["total"] == 5
+        assert [j["nome"] for j in faixa["jogadores"]] == [
+            "Bukayo Saka", "Nicolò Barella", "Markus Haaland", "Juan Colombiano", "Bukayo Saka"]
+        assert faixa["mais_caro"]["valor"] == 130_000_000 and faixa["mais_barato"]["valor"] == 100_000
+    pagina2 = cliente.get("/api/faixa?minimo=0&maximo=999999999&por_pagina=2&pagina=2").json()
+    assert pagina2["paginas"] == 3 and [j["valor"] for j in pagina2["jogadores"]] == [70_000_000, 900_000]
+    vazia = cliente.get("/api/faixa?minimo=1&maximo=2").json()
+    assert vazia["total"] == 0 and vazia["jogadores"] == [] and vazia["mais_caro"] is None
+
+
+def test_ir_para_um_nome_na_liga(cliente):
+    for modo in ("modificado", "classico"):
+        achado = cliente.get(f"/api/ligas/IT1/ir-para?q=Nic&modo={modo}").json()
+        assert achado["jogador"]["nome"] == "Nicolò Barella" and achado["posicao"] == 3 and achado["pagina"] == 1
+    assert cliente.get("/api/ligas/IT1/ir-para?q=zzz").json()["posicao"] is None
+    # Digitar o nome aos poucos: a segunda busca parte do "dedo" da primeira.
+    cliente.get("/api/ligas/IT1/ir-para?q=j")
+    passos = cliente.get("/api/ligas/IT1/ir-para?q=jo").json()["rastro"]["passos"]
+    assert any(p["passo"] == "dedo" for p in passos)
+
+
+def test_parecidos(cliente):
+    parecidos = cliente.get("/api/jogadores/2/parecidos").json()  # Saka (GB1), €130M, ataque
+    assert [j["nome"] for j in parecidos["jogadores"]] == [
+        "Erling Haaland", "Nicolò Barella", "Markus Haaland", "Juan Colombiano"]
+    assert any(p["passo"] == "vizinhos" for p in parecidos["rastro"]["passos"])
+    assert cliente.get("/api/jogadores/4/parecidos").json()["jogadores"] == []  # inativo
+
+
 def test_clube(cliente):
     inter = cliente.get("/api/clubes/46").json()
     assert inter["nome"] == "Inter Milan" and inter["liga"]["id"] == "IT1"

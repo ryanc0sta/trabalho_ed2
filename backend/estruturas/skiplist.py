@@ -128,6 +128,23 @@ class SkipList:
         self.tamanho -= 1
         return True
 
+    def posicao_teto(self, chave, rastro=None):
+        """Tripla (posição 1..n, chave, valor) da menor chave >= `chave`, ou None.
+        Na versão clássica a descida acha o nó, mas a posição exige contar os
+        nós do nível 0 desde o início: θ(n)."""
+        r = rastro or RASTRO_NULO
+        p, _ = self._descer(chave, r)
+        alvo = p.prox[0]
+        if alvo is self.sentinela:
+            r.registrar("nao_encontrado", chave=rotulo(chave))
+            return None
+        posicao, no = 1, self.cabeca.prox[0]
+        while no is not alvo:
+            no, posicao = no.prox[0], posicao + 1
+        r.registrar("percorre", nos=posicao - 1)
+        r.registrar("encontrado", no=rotulo(alvo.chave), posicao=posicao)
+        return posicao, alvo.chave, alvo.valor
+
     # --------------------------------------------------------------- consulta
     def nos_do_nivel(self, nivel):
         """Pares (chave, valor) presentes no nível informado, em ordem."""

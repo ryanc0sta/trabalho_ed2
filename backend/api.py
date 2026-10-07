@@ -19,6 +19,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.staticfiles import StaticFiles
 
 from .dados.carregar import PASTA_DADOS, carregar
+from .dados.modelos import normalizar
 from .estruturas.avl import ArvoreAVL
 from .estruturas.ordenacao import merge_sort
 from .estruturas.rastro import Rastro, rotulo
@@ -243,6 +244,7 @@ async def detalhar_jogador(request: Request, jogador_id: int):
         "clube": {"id": clube.id, "nome": clube.nome, "escudo": clube.escudo} if clube else None,
         "liga": {"id": liga.id, "nome": liga.nome, "logo": liga.logo} if liga else None,
         "ranking_liga": base.ranking_na_liga(jogador),
+        "na_lista": base.na_lista(jogador),
         "historico": [{"data": data, "valor": valor} for data, valor in avl],
         "transferencias": [t.para_json() for t in base.transferencias_de(jogador_id)],
         "arvore": recorte_arvore(avl, profundidade=64, dados_no=dados_no_historico),
@@ -302,6 +304,103 @@ def pico_classico(arvore: ArvoreAVL, de, ate, rastro):
     if melhor:
         rastro.registrar("pico", no=melhor[0], valor=melhor[1])
     return melhor
+
+
+@app.get("/api/jogadores/{jogador_id}/parecidos", tags=["ferramentas"],
+         summary="Jogadores da mesma posição com valor mais próximo (vizinhos na árvore por valor)")
+async def parecidos(request: Request, jogador_id: int):
+    base = obter_base(request)
+    jogador = obter_jogador(base, jogador_id)
+    rastro = Rastro()
+    return {"jogadores": [j.resumo() for j in base.parecidos(jogador, rastro=rastro)],
+            "rastro": rastro.para_json()}
+
+
+# ------------------------------------------------------------------ ferramentas
+@app.get("/api/lateral", tags=["ferramentas"], summary="Dados da barra lateral")
+async def lateral(request: Request):
+    base = obter_base(request)
+    return {
+        "minha_lista": len(base.minha_lista),
+        "buscas": base.buscas.chaves(),
+        "vistos": [j.resumo() for _, j in base.frequentes],
+    }
+
+
+@app.get("/api/minha-lista", tags=["ferramentas"], summary="Lista de observação (Skip List)")
+async def minha_lista(request: Request, modo: Modo = "modificado"):
+    base = obter_base(request)
+    skip = base.minha_lista if modo == "modificado" else base.minha_lista_classica
+    jogadores = nos_skip(skip.torres(0), 1)
+    return {"modo": modo, "total": len(skip), "nivel_lista": skip.nivel,
+            "valor_total": sum(j["valor"] or 0 for j in jogadores), "jogadores": jogadores}
+
+
+@app.put("/api/minha-lista/{jogador_id}", tags=["ferramentas"],
+         summary="Adiciona um jogador à lista: inserção na Skip List")
+async def adicionar_a_lista(request: Request, jogador_id: int, modo: Modo = "modificado"):
+    base = obter_base(request)
+    jogador = obter_jogador(base, jogador_id)
+    rastro = Rastro()
+    adicionado = base.adicionar_a_lista(jogador, classica=modo == "classico", rastro=rastro)
+    return {"modo": modo, "adicionado": adicionado, "total": len(base.minha_lista),
+            "rastro": rastro.para_json()}
+
+
+@app.delete("/api/minha-lista/{jogador_id}", tags=["ferramentas"],
+            summary="Remove um jogador da lista: remoção na Skip List")
+async def remover_da_lista(request: Request, jogador_id: int, modo: Modo = "modificado"):
+    base = obter_base(request)
+    jogador = obter_jogador(base, jogador_id)
+    rastro = Rastro()
+    removido = base.remover_da_lista(jogador, classica=modo == "classico", rastro=rastro)
+    return {"modo": modo, "removido": removido, "total": len(base.minha_lista),
+            "rastro": rastro.para_json()}
+
+
+@app.post("/api/buscas", tags=["ferramentas"],
+          summary="Registra um termo buscado (movimentação para o início)")
+async def registrar_busca(request: Request, q: str = Query(..., min_length=1, max_length=60)):
+    base = obter_base(request)
+    rastro = Rastro()
+    base.registrar_busca(q, rastro=rastro)
+    return {"buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
+
+
+@app.get("/api/faixa", tags=["ferramentas"],
+         summary="Jogadores numa faixa de valor (intervalo, piso e teto na árvore por valor)")
+async def faixa_de_valor(request: Request, minimo: int = Query(0, ge=0), maximo: int = Query(..., ge=0),
+                         pagina: int = Query(1, ge=1), por_pagina: int = Query(24, ge=1, le=100),
+                         modo: Modo = "modificado"):
+    base = obter_base(request)
+    rastro = Rastro()
+    total, jogadores, mais_barato, mais_caro = base.faixa_de_valor(
+        minimo, maximo, pagina, por_pagina, classica=modo == "classico", rastro=rastro)
+    return {
+        "modo": modo, "minimo": minimo, "maximo": maximo, "total": total,
+        "pagina": pagina, "paginas": max(1, -(-total // por_pagina)),
+        "jogadores": [j.resumo() for j in jogadores],
+        "mais_barato": mais_barato.resumo() if mais_barato else None,
+        "mais_caro": mais_caro.resumo() if mais_caro else None,
+        "rastro": rastro.para_json(),
+    }
+
+
+@app.get("/api/ligas/{liga_id}/ir-para", tags=["ferramentas"],
+         summary="Primeiro jogador da liga a partir de um nome (teto + busca dedilhada)")
+async def ir_para(request: Request, liga_id: str, q: str = Query(..., min_length=1, max_length=60),
+                  por_pagina: int = Query(24, ge=1, le=100), modo: Modo = "modificado"):
+    base = obter_base(request)
+    liga = obter_liga(base, liga_id)
+    skip = liga.skip if modo == "modificado" else liga.skip_classica
+    rastro = Rastro()
+    achado = skip.posicao_teto((normalizar(q),), rastro)
+    if achado is None:
+        return {"modo": modo, "posicao": None, "pagina": None, "jogador": None,
+                "rastro": rastro.para_json()}
+    posicao, _, jogador = achado
+    return {"modo": modo, "posicao": posicao, "pagina": (posicao - 1) // por_pagina + 1,
+            "jogador": jogador.resumo(), "rastro": rastro.para_json()}
 
 
 # ----------------------------------------------------------------------- clubes

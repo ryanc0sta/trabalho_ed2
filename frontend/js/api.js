@@ -54,4 +54,15 @@ export const api = {
   valorEm: (id, data) => pedir(`/jogadores/${id}/valor`, { params: { data } }),
   pico: (id, de, ate) => pedir(`/jogadores/${id}/pico`, { params: comModo({ de, ate }) }),
   clube: (id) => pedir(`/clubes/${id}`),
+  // ferramentas da barra lateral
+  lateral: () => pedir("/lateral"),
+  minhaLista: () => pedir("/minha-lista", { params: comModo() }),
+  adicionarALista: (id) => pedir(`/minha-lista/${id}`, { metodo: "PUT", params: comModo() }),
+  removerDaLista: (id) => pedir(`/minha-lista/${id}`, { metodo: "DELETE", params: comModo() }),
+  registrarBusca: (q) => pedir("/buscas", { metodo: "POST", params: { q } }),
+  faixa: (minimo, maximo, pagina, porPagina = 24) =>
+    pedir("/faixa", { params: comModo({ minimo, maximo, pagina, por_pagina: porPagina }) }),
+  irPara: (ligaId, q, porPagina = 24) =>
+    pedir(`/ligas/${ligaId}/ir-para`, { params: comModo({ q, por_pagina: porPagina }) }),
+  parecidos: (id) => pedir(`/jogadores/${id}/parecidos`),
 };

@@ -80,6 +80,37 @@ class ListaEncadeada:
         r.registrar("insere", no=rotulo(chave), posicao=self.tamanho - 1)
         return True
 
+    def inserir_no_inicio(self, chave, valor, rastro=None):
+        """Insere como primeiro elemento, se a chave ainda não existir.
+        A ligação é θ(1), mas checar a duplicata ainda percorre a lista."""
+        r = rastro or RASTRO_NULO
+        if self.consultar(chave) is not None:
+            r.registrar("duplicada", no=rotulo(chave))
+            return False
+        novo = self._novo_no(chave, valor)
+        novo.prox = self.cabeca
+        self.cabeca = novo
+        self.tamanho += 1
+        r.registrar("insere", no=rotulo(chave), posicao=0)
+        return True
+
+    def remover_ultimo(self, rastro=None):
+        """Remove o último elemento (o menos recente numa lista com
+        movimentação para o início). Retorna a chave removida ou None."""
+        r = rastro or RASTRO_NULO
+        if self.cabeca is None:
+            return None
+        anterior, atual = None, self.cabeca
+        while atual.prox is not None:
+            anterior, atual = atual, atual.prox
+        if anterior is None:
+            self.cabeca = None
+        else:
+            anterior.prox = None
+        self.tamanho -= 1
+        r.registrar("remove", no=rotulo(atual.chave), posicao=self.tamanho)
+        return atual.chave
+
     def remover(self, chave, rastro=None):
         r = rastro or RASTRO_NULO
         anterior, atual = None, self.cabeca

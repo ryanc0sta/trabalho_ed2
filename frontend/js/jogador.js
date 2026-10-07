@@ -3,11 +3,11 @@
 //   - clicar no gráfico = valor naquela data (busca de piso);
 //   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
 
-import { api, modoAtual } from "./api.js";
+import { api, modoAtual } from "./api.js?v=3";
 import {
-  animarNumero, esc, fotoHTML, formatarData, formatarValor, idade, iniciarPagina, mostrarErro,
-  parametro, registrarOperacao, traduzirPe, traduzirPosicao,
-} from "./comum.js";
+  animarNumero, atualizarLateral, cardJogador, esc, fotoHTML, formatarData, formatarValor, icone, idade,
+  iniciarPagina, mostrarErro, parametro, registrarOperacao, traduzirPe, traduzirPosicao,
+} from "./comum.js?v=3";
 
 iniciarPagina();
 
@@ -55,6 +55,7 @@ function renderizar() {
           ${fato("Pé", traduzirPe(j.pe) === "—" ? null : traduzirPe(j.pe))}
           ${fato("Contrato até", j.contrato ? formatarData(j.contrato) : null)}
         </dl>
+        <div class="acoes-perfil"><button class="botao" id="botao-lista"></button></div>
       </div>
     </section>
 
@@ -69,6 +70,11 @@ function renderizar() {
         <div class="grafico"><canvas id="grafico" aria-label="Histórico do valor de mercado" role="img"></canvas></div>
         <p class="leitura" id="leitura" aria-live="polite">Clique no gráfico para ver o valor em qualquer data.</p>`
         : `<p class="vazio">Sem histórico de valores.</p>`}
+    </section>
+
+    <section class="secao oculto" id="secao-parecidos">
+      <div class="secao-titulo"><h2>Parecidos</h2><span class="meta">Mesma posição, valor próximo</span></div>
+      <div class="grade" id="parecidos"></div>
     </section>
 
     <section class="secao">
@@ -88,6 +94,10 @@ function renderizar() {
     </section>`;
 
   animarNumero(document.getElementById("valor-atual"), j.valor);
+  const botaoLista = document.getElementById("botao-lista");
+  atualizarBotaoLista(botaoLista);
+  botaoLista.addEventListener("click", () => alternarLista(botaoLista));
+  carregarParecidos();
   if (historico.length) {
     desenharGrafico();
     document.getElementById("form-pico").addEventListener("submit", calcularPico);
@@ -96,6 +106,49 @@ function renderizar() {
 
 function clubeLink(id, nome) {
   return id ? `<a class="link" href="clube.html?id=${id}">${esc(nome)}</a>` : esc(nome || "—");
+}
+
+// ------------------------------------------------------------ minha lista
+function atualizarBotaoLista(botao) {
+  botao.setAttribute("aria-pressed", String(dados.na_lista));
+  botao.innerHTML = dados.na_lista ? `${icone("certo")}Na sua lista` : `${icone("marcador")}Adicionar à lista`;
+  botao.title = dados.na_lista ? "Remover da sua lista" : "Guardar este jogador na sua lista";
+}
+
+async function alternarLista(botao) {
+  botao.disabled = true;
+  try {
+    const nome = dados.jogador.nome;
+    const resposta = dados.na_lista ? await api.removerDaLista(jogadorId) : await api.adicionarALista(jogadorId);
+    registrarOperacao({
+      titulo: dados.na_lista ? `Remover ${nome} da lista` : `Adicionar ${nome} à lista`,
+      estrutura: `Lista com saltos · ${dados.na_lista ? "remoção" : "inserção"}`,
+      rastro: resposta.rastro,
+      resumo: [`${resposta.total} na lista`],
+    });
+    dados.na_lista = !dados.na_lista;
+    atualizarBotaoLista(botao);
+    atualizarLateral();
+  } finally {
+    botao.disabled = false;
+  }
+}
+
+// --------------------------------------------------------------- parecidos
+async function carregarParecidos() {
+  try {
+    const resposta = await api.parecidos(jogadorId);
+    if (!resposta.jogadores.length) return;
+    document.getElementById("parecidos").innerHTML = resposta.jogadores.map((j, i) => cardJogador(j, i)).join("");
+    document.getElementById("secao-parecidos").classList.remove("oculto");
+    registrarOperacao({
+      titulo: `Parecidos com ${dados.jogador.nome}`,
+      estrutura: "AVL por valor · sucessores e predecessores",
+      rastro: resposta.rastro,
+    });
+  } catch {
+    /* a seção apenas não aparece */
+  }
 }
 
 // ------------------------------------------------------------------ gráfico

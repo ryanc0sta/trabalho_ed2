@@ -117,6 +117,9 @@ button, input { font: inherit; color: inherit; }
 .botao:disabled { opacity: 0.45; cursor: not-allowed; }
 .botao.principal { background: var(--acao); border-color: var(--acao); color: var(--sobre-acao); }
 .botao.principal:hover:not(:disabled) { background: color-mix(in srgb, var(--acao) 86%, var(--tinta)); }
+.botao.pequeno { height: 32px; font-size: var(--t5); }
+.botao[aria-pressed="true"] { background: var(--tinta); border-color: var(--tinta); color: var(--fundo); }
+.botao[aria-pressed="true"]:hover:not(:disabled) { background: var(--tinta-2); border-color: var(--tinta-2); }
 .botao.icone-so { width: 40px; padding: 0; border-color: transparent; }
 .botao.icone-so:hover { background: var(--superficie); }
 
@@ -261,11 +264,12 @@ main { padding: var(--e5) 0 var(--e6); }
 
 .consulta { display: flex; flex-wrap: wrap; align-items: end; gap: var(--e2); }
 .consulta label { display: grid; gap: 4px; font-size: var(--t5); color: var(--tinta-2); }
-.consulta input[type="date"] {
+.consulta input {
   height: 40px; padding: 0 var(--e1); border: 1px solid var(--controle); border-radius: var(--raio);
   background: var(--fundo); font-family: var(--mono); transition: border-color var(--rapida), box-shadow var(--rapida);
 }
-.consulta input[type="date"]:focus { outline: none; border-color: var(--acao); box-shadow: 0 0 0 3px var(--foco); }
+.consulta input[type="number"] { width: 128px; }
+.consulta input:focus { outline: none; border-color: var(--acao); box-shadow: 0 0 0 3px var(--foco); }
 .grafico { position: relative; height: 320px; margin-top: var(--e3); cursor: crosshair; }
 .leitura { margin-top: var(--e2); min-height: 24px; color: var(--tinta-2); }
 .leitura b { color: var(--tinta); font-family: var(--mono); font-weight: 400; }
@@ -278,6 +282,53 @@ main { padding: var(--e5) 0 var(--e6); }
 /* ------------------------------------------------------------ página clube */
 .ficha { margin-top: var(--e1); color: var(--tinta-2); }
 .ficha b { color: var(--tinta); }
+
+/* ----------------------------------------------------------- barra lateral
+   Em telas largas fica fixa à esquerda (o corpo ganha a margem); em telas
+   estreitas vira uma gaveta aberta pelo botão de menu do topo. */
+.lateral {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: 240px;
+  display: flex; flex-direction: column; gap: var(--e3); padding: 0 var(--e2) var(--e3);
+  background: var(--fundo); border-right: 1px solid var(--borda);
+  overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--controle) transparent;
+  transform: translateX(-100%); transition: transform var(--media);
+}
+.lateral.aberta { transform: none; }
+.lateral .marca { display: flex; align-items: center; height: 64px; padding: 0 var(--e1); }
+.lateral h2 {
+  margin-bottom: var(--e1); padding: 0 var(--e1); font: 700 var(--t5) / 1.5 var(--texto);
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-2); word-spacing: normal;
+}
+.lateral a.item {
+  display: flex; align-items: center; gap: var(--e1); min-height: 40px; padding: 0 var(--e1);
+  border-radius: var(--raio); transition: background-color var(--rapida);
+}
+.lateral a.item:hover { background: var(--superficie); }
+.lateral a.item[aria-current="page"] { background: var(--superficie); font-weight: 700; }
+.lateral a.item .num { margin-left: auto; color: var(--tinta-2); }
+.lateral a.item .texto { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lateral a.item.fino { min-height: 32px; font-size: var(--t5); }
+.lateral a.item .icone { color: var(--tinta-2); }
+.lateral .avatar { width: 24px; height: 24px; font-size: 10px; }
+.lateral .vazio { padding: 0 var(--e1); font-size: var(--t5); }
+
+@media (min-width: 1024px) {
+  body { padding-left: 240px; }
+  .lateral { transform: none; z-index: 30; }
+  .topo .marca, .topo [data-menu] { display: none; }
+  .topo .busca { margin-left: 0; }
+  .topo .acoes, .topo .busca + .acoes { margin-left: auto; }
+  .so-estreito { display: none; }
+}
+
+/* atalhos de faixa, campo "ir para" e itens da lista */
+.atalhos { display: flex; flex-wrap: wrap; gap: var(--e1); margin-top: var(--e2); }
+.ir-para { flex: 1 1 240px; max-width: 320px; }
+.card.alvo .foto { outline: 2px solid var(--tinta); outline-offset: 2px; }
+.item-lista { display: flex; flex-direction: column; gap: var(--e1); }
+.item-lista .botao { align-self: flex-start; }
+.acoes-perfil { margin-top: var(--e3); }
+.introducao { margin-top: var(--e1); color: var(--tinta-2); }
 
 /* ------------------------------------------------------------ bastidores */
 .bastidores {
@@ -319,7 +370,7 @@ main { padding: var(--e5) 0 var(--e6); }
   .container { padding-inline: var(--e2); }
   main { padding-top: var(--e4); }
   .secao { margin-top: var(--e5); }
-  .topo .container { flex-wrap: wrap; height: auto; padding-top: var(--e1); padding-bottom: var(--e1); }
+  .topo .container { flex-wrap: wrap; gap: var(--e1); height: auto; padding-top: var(--e1); padding-bottom: var(--e1); }
   .topo .busca { order: 3; flex-basis: 100%; max-width: none; }
   .topo [data-bastidores] span:not(.num) { display: none; }
   .perfil { grid-template-columns: 1fr; gap: var(--e3); }

@@ -204,25 +204,58 @@ class ArvoreBinariaBusca:
             yield no.chave, no.valor
             no = no.dir
 
-    def a_partir_de(self, chave, limite):
-        """Até `limite` pares em ordem, começando pelo teto de `chave` —
-        base do autocompletar. Não altera a árvore."""
+    def iterar_a_partir_de(self, chave, rastro=None):
+        """Gera os pares em ordem crescente começando pelo teto de `chave`
+        (a menor chave >= chave) e seguindo de sucessor em sucessor.
+        Não altera a árvore."""
+        r = rastro or RASTRO_NULO
         pilha, no = [], self.raiz
         # Empilha o caminho até o teto, guardando só os nós com chave >= chave.
         while no is not None:
             if no.chave >= chave:
+                r.registrar("compara", no=rotulo(no.chave), decisao="esquerda")
                 pilha.append(no)
                 no = no.esq
             else:
+                r.registrar("compara", no=rotulo(no.chave), decisao="direita")
                 no = no.dir
-        resultado = []
-        while pilha and len(resultado) < limite:
+        while pilha:
             no = pilha.pop()
-            resultado.append((no.chave, no.valor))
+            yield no.chave, no.valor
             no = no.dir
             while no is not None:
                 pilha.append(no)
                 no = no.esq
+
+    def iterar_antes_de(self, chave, rastro=None):
+        """Gera os pares em ordem DEcrescente começando pela maior chave
+        estritamente menor que `chave` e seguindo de predecessor em predecessor."""
+        r = rastro or RASTRO_NULO
+        pilha, no = [], self.raiz
+        while no is not None:
+            if no.chave < chave:
+                r.registrar("compara", no=rotulo(no.chave), decisao="direita")
+                pilha.append(no)
+                no = no.dir
+            else:
+                r.registrar("compara", no=rotulo(no.chave), decisao="esquerda")
+                no = no.esq
+        while pilha:
+            no = pilha.pop()
+            yield no.chave, no.valor
+            no = no.esq
+            while no is not None:
+                pilha.append(no)
+                no = no.dir
+
+    def a_partir_de(self, chave, limite):
+        """Até `limite` pares em ordem, começando pelo teto de `chave` —
+        base do autocompletar. Não altera a árvore."""
+        resultado = []
+        for par in self.iterar_a_partir_de(chave):
+            if len(resultado) >= limite:
+                break
+            resultado.append(par)
         return resultado
 
     def primeiros_niveis(self, k):
