@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/estilo.css?v=3">
+  <link rel="stylesheet" href="css/estilo.css?v=4">
 </head>
 <body>
   <header id="topo"></header>
@@ -18,24 +18,25 @@
       <h1>Encontre qualquer jogador.</h1>
       <p>50 mil atletas de 31 ligas, com valor de mercado e histórico.</p>
       <div id="busca-principal"></div>
+      <p class="selo-linha"><span data-selo-de="busca"></span></p>
     </section>
 
     <section class="secao so-estreito oculto" id="secao-frequentes">
-      <div class="secao-titulo"><h2>Vistos por você</h2></div>
+      <div class="secao-titulo"><h2>Vistos por você</h2><span data-selo-de="vistos"></span></div>
       <div class="frequentes" id="frequentes"></div>
     </section>
 
     <section class="secao">
-      <div class="secao-titulo"><h2>Em alta</h2></div>
+      <div class="secao-titulo"><h2>Em alta</h2><span data-selo-de="em-alta"></span></div>
       <div class="carrossel" id="em-alta"></div>
     </section>
 
     <section class="secao">
-      <div class="secao-titulo"><h2>Ligas</h2><span class="meta">Mais visitadas primeiro</span></div>
+      <div class="secao-titulo"><h2>Ligas</h2><span class="grupo-selo"><span class="meta">Mais visitadas primeiro</span><span data-selo-de="ligas"></span></span></div>
       <div class="ligas recolhidas" id="ligas"></div>
       <button class="ver-todas link" id="ver-todas">Ver todas as ligas</button>
     </section>
   </main>
-  <script type="module" src="js/inicio.js?v=3"></script>
+  <script type="module" src="js/inicio.js?v=4"></script>
 </body>
 </html>

@@ -3,11 +3,11 @@
 //   - clicar no gráfico = valor naquela data (busca de piso);
 //   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
 
-import { api, modoAtual } from "./api.js?v=3";
+import { api, modoAtual } from "./api.js?v=4";
 import {
   animarNumero, atualizarLateral, cardJogador, esc, fotoHTML, formatarData, formatarValor, icone, idade,
-  iniciarPagina, mostrarErro, parametro, registrarOperacao, traduzirPe, traduzirPosicao,
-} from "./comum.js?v=3";
+  iniciarPagina, mostrarErro, parametro, registrarOperacao, selo, traduzirPe, traduzirPosicao,
+} from "./comum.js?v=4";
 
 iniciarPagina();
 
@@ -55,12 +55,12 @@ function renderizar() {
           ${fato("Pé", traduzirPe(j.pe) === "—" ? null : traduzirPe(j.pe))}
           ${fato("Contrato até", j.contrato ? formatarData(j.contrato) : null)}
         </dl>
-        <div class="acoes-perfil"><button class="botao" id="botao-lista"></button></div>
+        <div class="acoes-perfil"><button class="botao" id="botao-lista"></button>${selo("minha-lista")}</div>
       </div>
     </section>
 
     <section class="secao">
-      <div class="secao-titulo"><h2>Valor de mercado</h2></div>
+      <div class="secao-titulo"><h2>Valor de mercado</h2>${selo("valor")}</div>
       ${historico.length ? `
         <form class="consulta" id="form-pico">
           <label>De<input type="date" id="pico-de" value="${esc(primeira)}" min="${esc(primeira)}" max="${esc(ultima)}" required></label>
@@ -73,7 +73,7 @@ function renderizar() {
     </section>
 
     <section class="secao oculto" id="secao-parecidos">
-      <div class="secao-titulo"><h2>Parecidos</h2><span class="meta">Mesma posição, valor próximo</span></div>
+      <div class="secao-titulo"><h2>Parecidos</h2><span class="grupo-selo"><span class="meta">Mesma posição, valor próximo</span>${selo("parecidos")}</span></div>
       <div class="grade" id="parecidos"></div>
     </section>
 
@@ -120,11 +120,14 @@ async function alternarLista(botao) {
   try {
     const nome = dados.jogador.nome;
     const resposta = dados.na_lista ? await api.removerDaLista(jogadorId) : await api.adicionarALista(jogadorId);
+    const andares = resposta.rastro.passos.find((p) => ["nivel_por_valor", "sorteio"].includes(p.passo));
     registrarOperacao({
+      ferramenta: "minha-lista",
       titulo: dados.na_lista ? `Remover ${nome} da lista` : `Adicionar ${nome} à lista`,
-      estrutura: `Lista com saltos · ${dados.na_lista ? "remoção" : "inserção"}`,
       rastro: resposta.rastro,
-      resumo: [`${resposta.total} na lista`],
+      resultado: dados.na_lista
+        ? `A torre de ${nome} saiu da lista. Restam ${resposta.total}.`
+        : `${nome} entrou na lista${andares ? ` com uma torre de ${andares.nivel + 1} ${andares.nivel ? "andares" : "andar"}` : ""}.`,
     });
     dados.na_lista = !dados.na_lista;
     atualizarBotaoLista(botao);
@@ -142,9 +145,11 @@ async function carregarParecidos() {
     document.getElementById("parecidos").innerHTML = resposta.jogadores.map((j, i) => cardJogador(j, i)).join("");
     document.getElementById("secao-parecidos").classList.remove("oculto");
     registrarOperacao({
+      ferramenta: "parecidos",
       titulo: `Parecidos com ${dados.jogador.nome}`,
-      estrutura: "AVL por valor · sucessores e predecessores",
       rastro: resposta.rastro,
+      cena: { arvore: resposta.arvore, alvo: null },
+      resultado: `${resposta.jogadores.length} jogadores da mesma posição com valor próximo, achados andando pelos vizinhos na árvore.`,
     });
   } catch {
     /* a seção apenas não aparece */
@@ -223,7 +228,16 @@ async function consultarValor(data) {
       ? `Em ${formatarData(data)}: <b>${formatarValor(r.valor)}</b> (avaliação de ${formatarData(r.data)})`
       : `Sem avaliação até ${formatarData(data)}.`;
     marcar(r?.data, r?.valor);
-    registrarOperacao({ titulo: `Valor em ${formatarData(data)}`, estrutura: "AVL · busca de piso", rastro: resposta.rastro });
+    registrarOperacao({
+      ferramenta: "valor",
+      titulo: `Valor de ${dados.jogador.nome} em ${formatarData(data)}`,
+      rastro: resposta.rastro,
+      cena: {
+        arvore: resposta.arvore, alvo: r?.data,
+        legendaFinal: r ? `Resposta: a avaliação de ${formatarData(r.data)}, a última até a data pedida — ${formatarValor(r.valor)}.` : null,
+      },
+      resultado: `${resposta.rastro.comparacoes} comparações entre as ${dados.historico.length} avaliações do histórico.`,
+    });
   } catch (erro) {
     leitura.textContent = erro.message;
   }
@@ -246,9 +260,13 @@ async function calcularPico(evento) {
       : "Nenhuma avaliação no período.";
     marcar(r?.data, r?.valor);
     registrarOperacao({
-      titulo: `Pico entre ${formatarData(de)} e ${formatarData(ate)}`,
-      estrutura: modoAtual() === "modificado" ? "AVL aumentada · máximo da subárvore" : "AVL · percurso em ordem",
+      ferramenta: "valor",
+      titulo: `Pico de ${dados.jogador.nome} entre ${formatarData(de)} e ${formatarData(ate)}`,
       rastro: resposta.rastro,
+      cena: { arvore: resposta.arvore },
+      resultado: r
+        ? `Pico de ${formatarValor(r.valor)} achado com ${resposta.rastro.comparacoes} comparações entre ${dados.historico.length} avaliações.`
+        : "Nenhuma avaliação no período.",
     });
   } catch (erro) {
     leitura.textContent = erro.message;
@@ -269,21 +287,31 @@ async function iniciar() {
     renderizar();
     const passoAcesso = acesso.rastro.passos.find((p) => p.passo === "acesso");
     const rotacoes = acesso.rastro.passos.filter((p) => p.passo === "rotacao").length;
-    registrarOperacao({
+    const operacaoDaVisita = {
+      ferramenta: "em-alta",
       titulo: `Visita a ${dados.jogador.nome}`,
-      estrutura: modoAtual() === "modificado" ? "Árvore afunilada condicional" : "Árvore afunilada",
       rastro: acesso.rastro,
-      resumo: [
-        passoAcesso ? `acesso ${passoAcesso.contador} de ${passoAcesso.limite}` : null,
-        rotacoes ? `${rotacoes} rotações até a raiz` : "sem rotações",
-      ].filter(Boolean),
-    });
+      cena: { arvore: acesso.antes },
+      resultado: rotacoes
+        ? `Com ${rotacoes} rotações, ${dados.jogador.nome} chegou à raiz e passa a aparecer em “Em alta”.`
+        : passoAcesso && passoAcesso.contador < passoAcesso.limite
+          ? `Visita ${passoAcesso.contador} de ${passoAcesso.limite}: a árvore não mudou. Na ${passoAcesso.limite}ª visita ele sobe para a raiz.`
+          : `${dados.jogador.nome} já estava na raiz: nada a mudar.`,
+    };
+    const itensVistos = (lista) => lista.map((j) => ({ id: j.id, rotulo: j.nome.split(" ").pop(), titulo: j.nome }));
+    const trocou = acesso.vistos.rastro.passos.some((p) => p.passo === "transpoe");
     registrarOperacao({
-      titulo: `Montagem do histórico de ${dados.jogador.nome}`,
-      estrutura: "AVL aumentada · inserções em ordem",
-      rastro: dados.rastro_montagem,
-      resumo: [`${dados.rastro_montagem.passos.filter((p) => p.passo === "rotacao").length} rotações`],
+      ferramenta: "vistos",
+      titulo: `Visita a ${dados.jogador.nome}`,
+      rastro: acesso.vistos.rastro,
+      cena: { antes: itensVistos(acesso.vistos.antes), depois: itensVistos(acesso.vistos.depois) },
+      resultado: trocou
+        ? `${dados.jogador.nome} já estava entre os vistos e adiantou uma posição.`
+        : acesso.vistos.antes.some((j) => j.id === dados.jogador.id)
+          ? `${dados.jogador.nome} já é o primeiro dos vistos.`
+          : `${dados.jogador.nome} entrou no fim da lista de vistos.`,
     });
+    registrarOperacao(operacaoDaVisita); // por último: é a que o painel abre primeiro
   } catch (erro) {
     mostrarErro(elJogador, erro);
   }

@@ -84,6 +84,9 @@ def test_avl_ordem_contra_forca_bruta():
         assert arvore.selecionar(k) == (ordenadas[k], -ordenadas[k])
     assert arvore.selecionar(len(ordenadas)) is None
     assert [c for c, _ in arvore.fatia(10, 24)] == ordenadas[10:34]
+    inicio, fim = arvore.posicoes(100, 400)
+    assert ordenadas[inicio:fim] == [c for c in ordenadas if 100 <= c <= 400]
+    assert arvore.posicoes(400, 100) == (0, 0)
     assert [c for c, _ in arvore.fatia(len(ordenadas) - 3, 24)] == ordenadas[-3:]
 
 

@@ -174,10 +174,12 @@ class BaseDeDados:
             todos.reverse()
             jogadores = todos[(pagina - 1) * por_pagina: pagina * por_pagina]
         else:
-            total = arvore.contar(de, ate, r)
-            inicio = arvore.posicao(de)
-            alto = inicio + total - (pagina - 1) * por_pagina  # posição logo após a página
+            inicio, fim = arvore.posicoes(de, ate, r)
+            total = fim - inicio
+            alto = fim - (pagina - 1) * por_pagina  # posição logo após a página
             baixo = max(inicio, alto - por_pagina)
+            if alto > baixo:
+                r.registrar("etapa", nome="pagina")
             jogadores = [j for _, j in arvore.fatia(baixo, alto - baixo, r)] if alto > baixo else []
             jogadores.reverse()
         mais_barato = arvore.teto(de)  # busca de teto: o primeiro a partir do mínimo

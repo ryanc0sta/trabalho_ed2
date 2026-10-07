@@ -58,10 +58,10 @@ class SkipList:
                     rastro.registrar("compara", no="sentinela", nivel=i, decisao="desce")
                     break
                 if proximo.chave < chave:
-                    rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="avanca")
+                    rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="avanca", torre=proximo.nivel)
                     p = proximo
                 else:
-                    rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="desce")
+                    rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="desce", torre=proximo.nivel)
                     break
             aux[i] = p
         return p, aux

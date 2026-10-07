@@ -2,18 +2,18 @@
 // Cada adição e remoção é uma inserção/remoção ao vivo numa lista com saltos
 // (os passos aparecem nos Bastidores).
 
-import { api } from "./api.js?v=3";
+import { api } from "./api.js?v=4";
 import {
   atualizarLateral, cardJogador, esqueletos, formatarValor, iniciarPagina, mostrarErro,
-  registrarOperacao,
-} from "./comum.js?v=3";
+  registrarOperacao, selo,
+} from "./comum.js?v=4";
 
 iniciarPagina();
 
 const el = document.getElementById("lista");
 el.innerHTML = `
   <h1>Minha lista</h1>
-  <p class="introducao" id="resumo"></p>
+  <p class="introducao"><span id="resumo"></span> ${selo("minha-lista")}</p>
   <section id="corpo" style="margin-top:var(--e4)"><div class="grade">${esqueletos(4)}</div></section>`;
 const elResumo = document.getElementById("resumo");
 const elCorpo = document.getElementById("corpo");
@@ -47,10 +47,10 @@ async function remover(botao) {
     const nome = botao.parentElement.querySelector(".nome").textContent;
     const resposta = await api.removerDaLista(botao.dataset.remover);
     registrarOperacao({
+      ferramenta: "minha-lista",
       titulo: `Remover ${nome} da lista`,
-      estrutura: "Lista com saltos · remoção",
       rastro: resposta.rastro,
-      resumo: [`${resposta.total} na lista`],
+      resultado: `A torre de ${nome} saiu da lista. Restam ${resposta.total}.`,
     });
     atualizarLateral();
     carregar();

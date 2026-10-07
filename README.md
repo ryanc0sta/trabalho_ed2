@@ -40,8 +40,23 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | Parecidos | página do jogador | AVL por valor: **sucessores e predecessores** |
 | Vistos por você | barra lateral | Lista com transposição |
 
-O painel **Bastidores** (botão no topo) mostra os passos de cada operação e permite trocar
-entre a versão modificada e a clássica das estruturas.
+### Como o site mostra qual estrutura cada ferramenta usa
+
+- Cada ferramenta tem um **selo** com o nome da estrutura (por exemplo, "Lista com saltos" ao lado
+  do filtro da liga). Clicar no selo abre os Bastidores naquela ferramenta.
+- O painel **Bastidores** explica uma ferramenta por vez: o tipo (linear ou hierárquica), o que é a
+  estrutura, por que ela foi usada ali e uma **animação da última operação**, com uma frase por passo
+  e controles de tocar, pausar e avançar. A animação é montada a partir do rastro real devolvido pelo
+  servidor — não é uma simulação.
+- No fim do painel, o mapa **"O que cada ferramenta usa"** lista todas as ferramentas, separadas em
+  estruturas lineares e hierárquicas, e o seletor de versão (modificada ou clássica) para comparar.
+
+| Animação (`frontend/js/estruturas.js`) | Usada por |
+|---|---|
+| Lista encadeada (itens que se reordenam) | Ligas mais visitadas, Buscas recentes, Vistos por você |
+| Torres da lista com saltos (cursor descendo os níveis) | Destaques e páginas da liga, Ir para um nome, Minha lista |
+| Árvore (caminho, rotações, ramos aproveitados inteiros) | Em alta, Valor numa data e pico, Faixa de valor, Parecidos |
+| Busca binária (barras que caem pela metade) | Buscar jogador |
 
 ## Dados usados (backend/dados)
 

@@ -187,6 +187,25 @@ def test_parecidos(cliente):
     assert cliente.get("/api/jogadores/4/parecidos").json()["jogadores"] == []  # inativo
 
 
+def test_respostas_trazem_o_que_as_animacoes_desenham(cliente):
+    # Lista de vistos: a visita devolve o antes, o depois e os passos da transposição.
+    cliente.post("/api/jogadores/3/acessar")
+    visita = cliente.post("/api/jogadores/3/acessar").json()["vistos"]
+    assert {"id", "nome"} <= set(visita["depois"][0]) and len(visita["antes"]) == len(visita["depois"])
+    assert any(p["passo"] in ("transpoe", "encontrado") for p in visita["rastro"]["passos"])
+    # Skip List: cada comparação informa a altura da torre do nó.
+    passos = cliente.get("/api/ligas/GB1/ir-para?q=m").json()["rastro"]["passos"]
+    assert all("torre" in p for p in passos if p["passo"] == "compara" and p["no"] != "sentinela")
+    # Árvore por valor: recorte com o tamanho de cada ramo, e etapas da contagem.
+    faixa = cliente.get("/api/faixa?minimo=100000&maximo=130000000").json()
+    assert faixa["arvore"]["tam"] == 6 and "valor" in faixa["arvore"]
+    assert [p["nome"] for p in faixa["rastro"]["passos"] if p["passo"] == "etapa"] == ["ate", "de", "pagina"]
+    assert "arvore" in cliente.get("/api/jogadores/2/parecidos").json()
+    # Buscas recentes: a lista de antes acompanha a de depois.
+    resposta = cliente.post("/api/buscas?q=novo termo").json()
+    assert "novo termo" not in resposta["antes"] and resposta["buscas"][0] == "novo termo"
+
+
 def test_clube(cliente):
     inter = cliente.get("/api/clubes/46").json()
     assert inter["nome"] == "Inter Milan" and inter["liga"]["id"] == "IT1"

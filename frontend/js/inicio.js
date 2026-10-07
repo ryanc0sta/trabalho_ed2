@@ -2,10 +2,10 @@
 // "Em alta" = topo da árvore de busca; "Ligas" = lista autoorganizável (as
 // mais visitadas sobem); "Vistos por você" = lista com transposição.
 
-import { api, modoAtual } from "./api.js?v=3";
+import { api, modoAtual } from "./api.js?v=4";
 import {
   cardJogador, esc, esqueletos, iniciarPagina, montarBusca, montarFrequentes, mostrarErro, parametro,
-} from "./comum.js?v=3";
+} from "./comum.js?v=4";
 
 iniciarPagina({ busca: false });
 const campoBusca = montarBusca(document.getElementById("busca-principal"), { grande: true });

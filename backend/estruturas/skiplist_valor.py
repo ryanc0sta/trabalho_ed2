@@ -120,11 +120,11 @@ class SkipListValor(SkipList):
                     break
                 if proximo.chave < chave:
                     rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i,
-                                     decisao="avanca", largura=p.largura[i])
+                                     decisao="avanca", largura=p.largura[i], torre=proximo.nivel)
                     posicao += p.largura[i]
                     p = proximo
                 else:
-                    rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="desce")
+                    rastro.registrar("compara", no=rotulo(proximo.chave), nivel=i, decisao="desce", torre=proximo.nivel)
                     break
             aux[i], pos[i] = p, posicao
         return p
@@ -166,9 +166,10 @@ class SkipListValor(SkipList):
                 acima = aux[i + 1].prox[i + 1]
                 if acima is self.sentinela or acima.chave >= chave:
                     break
-                r.registrar("compara", no=rotulo(acima.chave), nivel=i + 1, decisao="sobe")
+                r.registrar("compara", no=rotulo(acima.chave), nivel=i + 1, decisao="sobe", torre=acima.nivel)
                 i += 1
-            r.registrar("dedo", nivel=i, de=rotulo(dedo[0]))
+            r.registrar("dedo", nivel=i, de=rotulo(dedo[0]), torre=aux[i].nivel,
+                        no="cabeca" if aux[i] is self.cabeca else rotulo(aux[i].chave))
             p = self._descer_niveis(chave, aux[i], pos[i], i, aux, pos, r)
         else:
             p, aux, pos = self._descer_com_posicao(chave, r)
@@ -254,7 +255,7 @@ class SkipListValor(SkipList):
             while p.prox[i] is not self.sentinela and atual + p.largura[i] <= posicao:
                 atual += p.largura[i]
                 p = p.prox[i]
-                rastro.registrar("salta", no=rotulo(p.chave), nivel=i, posicao=atual)
+                rastro.registrar("salta", no=rotulo(p.chave), nivel=i, posicao=atual, torre=p.nivel)
             if atual == posicao:
                 break
             rastro.registrar("desce", nivel=i)

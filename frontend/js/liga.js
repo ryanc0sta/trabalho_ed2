@@ -2,11 +2,11 @@
 // percorre os níveis da lista com saltos (cada nível tem metade dos jogadores
 // do anterior — os mais valiosos, na versão modificada).
 
-import { api, modoAtual } from "./api.js?v=3";
+import { api, modoAtual } from "./api.js?v=4";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
-  registrarOperacao,
-} from "./comum.js?v=3";
+  registrarOperacao, selo,
+} from "./comum.js?v=4";
 
 iniciarPagina();
 
@@ -57,7 +57,7 @@ function renderizarFiltro() {
   elFiltro.innerHTML = `
     <div class="linha">
       <label class="rotulo" for="nivel" id="rotulo-nivel"></label>
-      <span class="meta num" id="contagem-nivel"></span>
+      <span class="grupo-selo"><span class="meta num" id="contagem-nivel"></span>${selo("destaques")}</span>
     </div>
     <input id="nivel" type="range" min="0" max="${maximo}" value="${nivel}">
     <div class="extremos"><span>Todos</span><span>Só os destaques</span></div>
@@ -67,7 +67,7 @@ function renderizarFiltro() {
           <input type="search" id="ir-para" placeholder="Ir para um nome" aria-label="Ir para um nome na lista da liga" autocomplete="off">
         </div>
       </div>
-      <span class="meta" id="aviso-ir-para" aria-live="polite"></span>
+      <span class="grupo-selo"><span class="meta" id="aviso-ir-para" aria-live="polite"></span>${selo("ir-para")}</span>
     </div>`;
   elFiltro.querySelector("#nivel").addEventListener("input", (e) => mudarNivel(Number(e.target.value)));
   elFiltro.querySelector("#ir-para").addEventListener("input", (e) => {
@@ -91,10 +91,12 @@ async function irPara(texto) {
   try {
     const achado = await api.irPara(ligaId, texto, POR_PAGINA);
     registrarOperacao({
+      ferramenta: "ir-para",
       titulo: `Ir para “${texto}” em ${detalhe.nome}`,
-      estrutura: "Lista com saltos · busca de teto",
       rastro: achado.rastro,
-      resumo: achado.posicao ? [`posição ${achado.posicao} de ${detalhe.jogadores}`] : [],
+      resultado: achado.posicao
+        ? `Chegou a ${achado.jogador.nome}, o ${achado.posicao}º de ${detalhe.jogadores}, com ${achado.rastro.comparacoes} comparações.`
+        : `Nenhum nome a partir de “${texto}”.`,
     });
     if (!achado.posicao) {
       aviso.textContent = `Nenhum nome a partir de “${texto}”.`;
@@ -148,11 +150,18 @@ async function carregarJogadores() {
       alvo?.scrollIntoView({ behavior: "smooth", block: "center" });
       alvoId = null;
     }
+    const passosDaPagina = dados.rastro.passos.length;
     registrarOperacao({
-      titulo: `${detalhe.nome}: nível ${dados.nivel}, página ${dados.pagina}`,
-      estrutura: "Lista com saltos",
+      ferramenta: "destaques",
+      titulo: dados.nivel === 0
+        ? `${detalhe.nome}: todos os jogadores, página ${dados.pagina}`
+        : `${detalhe.nome}: vista do nível ${dados.nivel}`,
       rastro: dados.rastro,
-      resumo: [`${dados.total} jogadores no nível`],
+      // Num nível alto não há busca: o desenho mostra as torres que chegam até ele.
+      cena: { torres: dados.jogadores.map((j) => ({ no: j.no, nivel: j.nivel })), nivel: dados.nivel },
+      resultado: dados.nivel === 0
+        ? (passosDaPagina ? `Chegou ao começo da página ${dados.pagina} em ${passosDaPagina} ${passosDaPagina === 1 ? "passo" : "passos"}.` : "")
+        : `No nível ${dados.nivel} só aparecem ${dados.total} das ${detalhe.jogadores} torres: as mais altas.`,
     });
   } catch (erro) {
     if (meu === pedido) mostrarErro(elJogadores, erro);
@@ -186,11 +195,15 @@ async function iniciar() {
     const [acesso, dados] = await Promise.all([api.acessarLiga(ligaId), api.liga(ligaId)]);
     detalhe = dados;
     const passo = acesso.rastro.passos.find((p) => ["avanca", "move_inicio"].includes(p.passo));
+    const itens = (ligas) => ligas.map((l) => ({ id: l.id, rotulo: l.id, titulo: l.nome }));
     registrarOperacao({
+      ferramenta: "ligas",
       titulo: `Visita a ${detalhe.nome}`,
-      estrutura: modoAtual() === "modificado" ? "Lista com movimentação ponderada" : "Lista com movimentação para o início",
       rastro: acesso.rastro,
-      resumo: [passo ? `posição ${passo.de + 1} → ${passo.para + 1}` : "posição mantida"],
+      cena: { antes: itens(acesso.antes), depois: itens(acesso.depois) },
+      resultado: passo
+        ? `${detalhe.nome} foi da ${passo.de + 1}ª para a ${passo.para + 1}ª posição entre as ligas.`
+        : `${detalhe.nome} manteve a posição entre as ligas.`,
     });
     nivel = nivelInicial();
     renderizarCabecalho();

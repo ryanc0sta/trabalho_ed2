@@ -60,6 +60,11 @@ def dados_no_historico(no):
     return dados
 
 
+def dados_no_valor(no):
+    """Nó da árvore por valor (chave = (valor, id), valor = Jogador)."""
+    return {"nome": no.valor.nome, "valor": no.valor.valor, "tam": no.tam}
+
+
 # ----------------------------------------------------------------------- listas
 def itens_ligas(lista):
     """Ligas na ordem atual da lista (com a pontuação, se for a ponderada)."""

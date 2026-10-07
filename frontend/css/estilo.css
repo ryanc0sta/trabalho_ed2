@@ -330,25 +330,96 @@ main { padding: var(--e5) 0 var(--e6); }
 .acoes-perfil { margin-top: var(--e3); }
 .introducao { margin-top: var(--e1); color: var(--tinta-2); }
 
-/* ------------------------------------------------------------ bastidores */
+/* ------------------------------------------------------------ bastidores
+   Explica uma ferramenta por vez: a estrutura que ela usa e uma animação da
+   última operação. */
 .bastidores {
-  position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(440px, 100vw);
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(560px, 100vw);
   background: var(--fundo); border-left: 1px solid var(--controle);
   transform: translateX(100%); transition: transform var(--media);
   display: flex; flex-direction: column;
 }
 .bastidores.aberto { transform: none; }
 .bastidores header { display: flex; align-items: center; justify-content: space-between; gap: var(--e2); padding: var(--e2) var(--e3); border-bottom: 1px solid var(--borda); }
-.bastidores .corpo { overflow-y: auto; padding: var(--e3); display: grid; gap: var(--e4); align-content: start; }
-.bastidores .versao { display: grid; gap: var(--e1); justify-items: start; }
-.operacao { display: grid; gap: var(--e1); }
-.operacao + .operacao { padding-top: var(--e3); border-top: 1px solid var(--borda); }
-.operacao .estrutura { font-size: var(--t5); color: var(--tinta-2); }
-.operacao h3 { font-size: var(--t4); font-family: var(--texto); font-stretch: 100%; }
-.operacao .numeros { font-size: var(--t5); color: var(--tinta-2); }
-.passos { margin: 0; padding-left: var(--e3); display: grid; gap: 4px; font-size: var(--t5); }
+.bastidores .corpo { overflow-y: auto; padding: var(--e3); display: grid; gap: var(--e5); align-content: start; scrollbar-width: thin; scrollbar-color: var(--controle) transparent; }
+.bastidores .tipo { display: flex; align-items: center; gap: var(--e1); font-size: var(--t5); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-2); }
+.bastidores .tipo .icone { width: 16px; height: 16px; }
+#explicacao { display: grid; gap: var(--e2); }
+.nome-estrutura { font-size: var(--t2); }
+.porque { color: var(--tinta-2); }
+.porque b { color: var(--tinta); }
+.operacao { display: grid; gap: var(--e2); padding-top: var(--e3); border-top: 1px solid var(--borda); }
+.palco { padding: var(--e1); border: 1px solid var(--borda); border-radius: var(--raio); background: var(--superficie); overflow: hidden; }
+.palco svg { display: block; width: 100%; height: auto; }
+.legenda { min-height: 48px; margin-top: var(--e2); }
+.controles { display: flex; align-items: center; gap: var(--e1); }
+.controles .num { margin-left: auto; font-size: var(--t5); color: var(--tinta-2); }
+.resultado { font-weight: 700; }
+.operacao details summary { cursor: pointer; font-size: var(--t5); color: var(--tinta-2); }
+.operacao details summary:hover { color: var(--tinta); }
+.passos { margin: var(--e1) 0 0; padding-left: var(--e4); display: grid; gap: 4px; font-size: var(--t5); }
 .passos li::marker { font-family: var(--mono); color: var(--tinta-2); }
-.passos li.chave { font-weight: 700; }
+
+.mapa h3 { margin-bottom: var(--e2); }
+.mapa ul { list-style: none; margin: var(--e1) 0 var(--e3); padding: 0; }
+.mapa button {
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--e2); width: 100%;
+  padding: var(--e1); border: 0; border-radius: var(--raio); background: none; text-align: left; cursor: pointer;
+  transition: background-color var(--rapida);
+}
+.mapa button:hover, .mapa button[aria-current] { background: var(--superficie); }
+.mapa button[aria-current] > span:first-child { font-weight: 700; }
+.mapa button .meta { text-align: right; }
+.bastidores .versao { display: grid; gap: var(--e1); justify-items: start; }
+
+/* selo: diz qual estrutura a ferramenta usa e abre a explicação */
+.selo {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 var(--e1); vertical-align: middle;
+  border: 1px solid var(--borda); border-radius: 999px; background: none; color: var(--tinta-2);
+  font: 400 var(--t5) / 1 var(--texto); letter-spacing: 0; text-transform: none; white-space: nowrap; cursor: pointer;
+  transition: border-color var(--rapida), color var(--rapida), background-color var(--rapida);
+}
+.selo:hover { border-color: var(--controle); color: var(--tinta); background: var(--superficie); }
+.selo .icone { width: 14px; height: 14px; }
+.selo.so-icone { width: 24px; padding: 0; justify-content: center; }
+.grupo-selo { display: inline-flex; align-items: center; gap: var(--e1); flex-wrap: wrap; justify-content: flex-end; }
+.selo-linha { margin-top: var(--e1); }
+.acoes-perfil { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
+.ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--acao); }
+
+/* desenhos do palco (SVG). O verde marca o ponto onde o algoritmo está. */
+.palco text { font-family: var(--mono); font-size: 10px; fill: var(--tinta-2); }
+.no-lista { transition: transform 420ms ease, opacity 300ms ease; }
+.no-lista rect { fill: var(--fundo); stroke: var(--controle); transition: fill var(--media); }
+.no-lista text { font-size: 11px; fill: var(--tinta); }
+.no-lista.achado rect { fill: var(--tinta); stroke: var(--tinta); }
+.no-lista.achado text { fill: var(--fundo); }
+.cursor-lista { fill: none; stroke: var(--acao); stroke-width: 2.5; transition: transform 300ms ease, opacity var(--media); }
+.seta { fill: none; stroke: var(--controle); stroke-width: 1.2; }
+.trilho { stroke: var(--borda); }
+.eixo { font-size: 9px; }
+.andar { fill: var(--fundo); stroke: var(--controle); transition: opacity 300ms ease, fill var(--media); }
+.andar.extremo { fill: var(--borda); }
+.andar.achado { fill: var(--tinta); stroke: var(--tinta); }
+.andar.sonda { stroke: var(--acao); stroke-width: 2; }
+.cursor-torre { fill: none; stroke: var(--acao); stroke-width: 2.5; transition: transform 380ms ease, opacity var(--media); }
+.rotulo-coluna { font-size: 9px; }
+.rotulo-coluna.ativo { fill: var(--tinta); font-weight: 700; }
+.ramo { stroke: var(--controle); stroke-width: 1.2; }
+.no-arvore circle { fill: var(--fundo); stroke: var(--controle); stroke-width: 1.5; transition: fill var(--media), stroke var(--media); }
+.no-arvore.resumo path { fill: var(--borda); }
+.no-arvore.visitado circle { stroke: var(--tinta); stroke-width: 2; }
+.no-arvore.inteira circle { fill: color-mix(in srgb, var(--acao) 30%, var(--fundo)); }
+.no-arvore.inteira path { fill: color-mix(in srgb, var(--acao) 45%, var(--fundo)); }
+.no-arvore.descartada { opacity: 0.25; }
+.no-arvore.atual circle { stroke: var(--acao); stroke-width: 3.5; }
+.no-arvore.alvo circle { fill: var(--tinta); stroke: var(--tinta); }
+.no-arvore.atual text, .no-arvore.alvo text { fill: var(--tinta); font-weight: 700; }
+.faixa-vetor { transition: opacity 300ms ease; }
+.faixa-vetor rect { fill: var(--controle); }
+.faixa-vetor.atual rect { fill: var(--acao); }
+.faixa-vetor.atual text { fill: var(--tinta); }
+
 .veu { position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, 0.32); opacity: 0; pointer-events: none; transition: opacity var(--media); }
 .veu.visivel { opacity: 1; pointer-events: auto; }
 
@@ -378,6 +449,9 @@ main { padding: var(--e5) 0 var(--e6); }
   .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e3) var(--e2); }
   .ligas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cabecalho .escudo-grande { width: 64px; height: 64px; }
-  .transferencias .opcional { display: none; }
+  /* tabela de transferências: cabe em 360px mesmo com nomes de clube longos */
+  .transferencias { font-size: var(--t5); }
+  .transferencias th, .transferencias td { padding-right: var(--e1); }
+  .transferencias td { overflow-wrap: anywhere; }
   .frequente:nth-child(n + 7) { display: none; } /* no celular, só os 6 mais vistos */
 }

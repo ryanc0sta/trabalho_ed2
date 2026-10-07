@@ -2,11 +2,11 @@
 // Usa a árvore por valor: contagem pela diferença de posições (tamanho das
 // subárvores), página selecionada pela posição, e piso/teto para os extremos.
 
-import { api } from "./api.js?v=3";
+import { api } from "./api.js?v=4";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
-  registrarOperacao,
-} from "./comum.js?v=3";
+  registrarOperacao, selo,
+} from "./comum.js?v=4";
 
 iniciarPagina();
 
@@ -26,7 +26,7 @@ let pagina = 1;
 
 el.innerHTML = `
   <h1>Faixa de valor</h1>
-  <p class="introducao">Jogadores em atividade pelo valor de mercado.</p>
+  <p class="introducao">Jogadores em atividade pelo valor de mercado. ${selo("faixa")}</p>
   <form class="consulta" id="form-faixa" style="margin-top:var(--e4)">
     <label>De (€ milhões)<input type="number" id="minimo" min="0" max="300" step="0.1" value="${minimo}" required></label>
     <label>Até (€ milhões)<input type="number" id="maximo" min="0" max="300" step="0.1" value="${maximo}" required></label>
@@ -81,10 +81,13 @@ async function carregar() {
     elJogadores.innerHTML = dados.jogadores.map((j, i) => cardJogador(j, i)).join("");
     renderizarPaginacao(dados);
     registrarOperacao({
-      titulo: `Faixa ${faixa}, página ${dados.pagina}`,
-      estrutura: dados.modo === "classico" ? "AVL por valor · percurso da faixa" : "AVL por valor com tamanho da subárvore",
+      ferramenta: "faixa",
+      titulo: `Jogadores ${faixa}`,
       rastro: dados.rastro,
-      resumo: [`${dados.total} jogadores na faixa`],
+      cena: { arvore: dados.arvore },
+      resultado: dados.modo === "classico"
+        ? `Contou ${dados.total} jogadores visitando um por um: ${dados.rastro.comparacoes} comparações.`
+        : `Contou ${dados.total} jogadores com ${dados.rastro.comparacoes} comparações, sem visitar a faixa inteira.`,
     });
   } catch (erro) {
     mostrarErro(elJogadores, erro);

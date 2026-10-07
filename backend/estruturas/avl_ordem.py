@@ -61,14 +61,24 @@ class ArvoreAVLOrdem(ArvoreAVL):
         """Quantas chaves são menores que `chave` (posição 0..n em ordem crescente)."""
         return self._menores(chave, False, rastro or RASTRO_NULO)
 
-    def contar(self, de, ate, rastro=None):
-        """Quantas chaves existem com de <= chave <= ate, em θ(log n)."""
+    def posicoes(self, de, ate, rastro=None):
+        """Par (início, fim): as posições que delimitam as chaves com
+        de <= chave <= ate. A faixa tem fim − início chaves e ocupa as
+        posições início..fim−1 — duas descidas, sem visitar a faixa."""
         r = rastro or RASTRO_NULO
         if de > ate:
-            return 0
-        total = self._menores(ate, True, r) - self._menores(de, False, r)
-        r.registrar("contagem", quantidade=total)
-        return total
+            return 0, 0
+        r.registrar("etapa", nome="ate")
+        fim = self._menores(ate, True, r)
+        r.registrar("etapa", nome="de")
+        inicio = self._menores(de, False, r)
+        r.registrar("contagem", quantidade=fim - inicio)
+        return inicio, fim
+
+    def contar(self, de, ate, rastro=None):
+        """Quantas chaves existem com de <= chave <= ate, em θ(log n)."""
+        inicio, fim = self.posicoes(de, ate, rastro)
+        return fim - inicio
 
     def selecionar(self, k, rastro=None):
         """Par (chave, valor) da k-ésima menor chave (k = 0..n-1), ou None."""

@@ -2,52 +2,14 @@
 // "Bastidores" — onde ficam os detalhes técnicos (passos de cada operação e a
 // escolha entre as versões modificada e clássica das estruturas).
 
-import { api, definirModo, modoAtual } from "./api.js?v=3";
+import { api, definirModo, modoAtual } from "./api.js?v=4";
+import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=4";
 
-// ------------------------------------------------------------------ ícones
-// Conjunto único: Lucide (https://lucide.dev, licença ISC), embutido como SVG.
-const ICONES = {
-  busca: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
-  fechar: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-  anterior: '<path d="m15 18-6-6 6-6"/>',
-  proximo: '<path d="m9 18 6-6-6-6"/>',
-  lua: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
-  sol: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
-  bastidores: '<rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/>',
-  menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
-  inicio: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
-  faixa: '<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
-  marcador: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
-  relogio: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
-  certo: '<path d="M20 6 9 17l-5-5"/>',
-};
-export const icone = (nome) =>
-  `<svg class="icone" viewBox="0 0 24 24" aria-hidden="true">${ICONES[nome]}</svg>`;
+import { ESTRUTURAS, FERRAMENTAS, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=4";
+
+export { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo, selo };
 
 // -------------------------------------------------------------- formatação
-export function esc(texto) {
-  return String(texto ?? "").replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-  })[c]);
-}
-
-export function formatarValor(valor) {
-  if (valor === null || valor === undefined) return "—";
-  if (valor >= 1e9) return `€${(valor / 1e9).toFixed(1).replace(".", ",")} bi`;
-  if (valor >= 1e6) {
-    const m = valor / 1e6;
-    return `€${m >= 100 || Number.isInteger(m) ? Math.round(m) : m.toFixed(1).replace(".", ",")}M`;
-  }
-  if (valor >= 1e3) return `€${Math.round(valor / 1e3)}K`;
-  return `€${valor}`;
-}
-
-export function formatarData(iso) {
-  if (!iso) return "—";
-  const [ano, mes, dia] = iso.split("-");
-  return `${dia}/${mes}/${ano}`;
-}
-
 export function idade(nascimento) {
   if (!nascimento) return null;
   const hoje = new Date();
@@ -67,15 +29,6 @@ const POSICOES = {
 };
 export const traduzirPosicao = (p) => POSICOES[p] || p || "—";
 export const traduzirPe = (p) => ({ right: "Direito", left: "Esquerdo", both: "Ambos" })[p] || "—";
-
-/** Rótulo de um nó do rastro: "erling haaland|418560" -> "erling haaland". */
-export function nomeDoNo(no) {
-  if (no === null || no === undefined) return "—";
-  const texto = String(no);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return formatarData(texto);
-  if (/^\d+\|\d+$/.test(texto)) return formatarValor(Number(texto.split("|")[0])); // (valor, id)
-  return texto.split("|")[0];
-}
 
 export function parametro(nome) {
   return new URLSearchParams(location.search).get(nome);
@@ -174,7 +127,7 @@ function montarTopo({ busca = true } = {}) {
       <div class="acoes">
         <button class="botao icone-so" data-tema></button>
         <button class="botao" data-bastidores aria-controls="bastidores">
-          ${icone("bastidores")}<span>Bastidores</span><span class="num" data-contador>0</span>
+          ${icone("bastidores")}<span>Bastidores</span><i class="ponto oculto" data-novo aria-label="há uma nova animação"></i>
         </button>
       </div>
     </div>`;
@@ -211,7 +164,16 @@ export function montarBusca(caixa, { grande = false } = {}) {
     el.setAttribute("aria-selected", String(i === selecionado)));
   const abrir = async (jogador) => {
     try {
-      await api.registrarBusca(entrada.value.trim()); // entra nas "buscas recentes"
+      const termo = entrada.value.trim();
+      const resposta = await api.registrarBusca(termo); // entra nas "buscas recentes"
+      const itens = (termos) => termos.map((t) => ({ id: t, rotulo: t, titulo: t }));
+      registrarOperacao({
+        ferramenta: "buscas-recentes",
+        titulo: `Busca por “${termo}”`,
+        rastro: resposta.rastro,
+        cena: { antes: itens(resposta.antes), depois: itens(resposta.buscas) },
+        resultado: `“${resposta.buscas[0]}” agora é a primeira das buscas recentes.`,
+      });
     } catch {
       /* não impede a navegação */
     }
@@ -241,9 +203,10 @@ export function montarBusca(caixa, { grande = false } = {}) {
         lista.classList.remove("oculto");
         entrada.setAttribute("aria-expanded", "true");
         registrarOperacao({
+          ferramenta: "busca",
           titulo: `Sugestões para “${q}”`,
-          estrutura: "Lista ordenada · busca binária",
           rastro: resposta.rastro,
+          resultado: `${resposta.rastro.comparacoes} comparações para chegar às sugestões de “${q}”.`,
         });
       } catch {
         fechar();
@@ -267,7 +230,30 @@ export function montarBusca(caixa, { grande = false } = {}) {
 }
 
 // -------------------------------------------------------------- bastidores
-const operacoes = [];
+// O painel explica UMA ferramenta por vez: qual estrutura ela usa, por quê, e
+// uma animação da última operação feita (a partir do rastro real do servidor).
+// A última operação de cada ferramenta fica na sessão, para continuar
+// disponível ao trocar de página.
+const CHAVE_OPERACOES = "bastidores";
+const operacoes = lerOperacoes();
+let ferramentaAtual = null;
+let pararAnimacao = () => {};
+
+function lerOperacoes() {
+  try {
+    return JSON.parse(sessionStorage.getItem(CHAVE_OPERACOES)) || { porFerramenta: {}, ultima: null };
+  } catch {
+    return { porFerramenta: {}, ultima: null };
+  }
+}
+
+function guardarOperacoes() {
+  try {
+    sessionStorage.setItem(CHAVE_OPERACOES, JSON.stringify(operacoes));
+  } catch {
+    /* sem espaço ou sem armazenamento: as operações valem só nesta página */
+  }
+}
 
 function montarBastidores() {
   document.body.insertAdjacentHTML("beforeend", `
@@ -278,28 +264,35 @@ function montarBastidores() {
         <button class="botao icone-so" data-fechar aria-label="Fechar">${icone("fechar")}</button>
       </header>
       <div class="corpo">
+        <section id="explicacao"></section>
+        <section class="mapa" id="mapa"></section>
         <div class="versao">
-          <span class="meta">Versão das estruturas</span>
+          <span class="meta">Versão das estruturas (para comparar)</span>
           <div class="segmentado" role="group" aria-label="Versão das estruturas">
             <button data-modo="modificado">Modificada</button>
             <button data-modo="classico">Clássica</button>
           </div>
         </div>
-        <div id="operacoes"><p class="meta">As operações feitas pelo site aparecem aqui, passo a passo.</p></div>
       </div>
     </aside>`);
   const painel = document.getElementById("bastidores");
   const veu = document.querySelector(".veu");
-  const abrirFechar = (abrir) => {
-    painel.classList.toggle("aberto", abrir);
-    painel.setAttribute("aria-hidden", String(!abrir));
-    veu.classList.toggle("visivel", abrir);
-    if (abrir) painel.querySelector("[data-fechar]").focus();
-  };
-  document.querySelector("[data-bastidores]").addEventListener("click", () => abrirFechar(true));
-  painel.querySelector("[data-fechar]").addEventListener("click", () => abrirFechar(false));
-  veu.addEventListener("click", () => abrirFechar(false));
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") abrirFechar(false); });
+  document.querySelector("[data-bastidores]").addEventListener("click", () => abrirBastidores());
+  painel.querySelector("[data-fechar]").addEventListener("click", fecharBastidores);
+  veu.addEventListener("click", fecharBastidores);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharBastidores(); });
+  // Selos espalhados pelo site e linhas do mapa abrem a explicação da ferramenta.
+  document.addEventListener("click", (e) => {
+    const alvo = e.target.closest("[data-selo]");
+    if (alvo) {
+      e.preventDefault();
+      abrirBastidores(alvo.dataset.selo);
+    }
+  });
+  painel.querySelector("#mapa").addEventListener("click", (e) => {
+    const linha = e.target.closest("[data-ferramenta]");
+    if (linha) mostrarFerramenta(linha.dataset.ferramenta);
+  });
 
   const botoesModo = painel.querySelectorAll("[data-modo]");
   const marcarModo = () => botoesModo.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.modo === modoAtual())));
@@ -311,93 +304,83 @@ function montarBastidores() {
   }));
 }
 
-/** Registra uma operação: { titulo, estrutura, rastro: {passos, comparacoes}, resumo?: [texto] }. */
+/** Abre o painel na ferramenta indicada (ou na da última operação feita). */
+export function abrirBastidores(ferramenta) {
+  const painel = document.getElementById("bastidores");
+  painel.classList.add("aberto");
+  painel.setAttribute("aria-hidden", "false");
+  document.querySelector(".veu").classList.add("visivel");
+  document.querySelector("[data-novo]")?.classList.add("oculto");
+  mostrarFerramenta(FERRAMENTAS[ferramenta] ? ferramenta : operacoes.ultima || "busca");
+  painel.querySelector("[data-fechar]").focus();
+}
+
+function fecharBastidores() {
+  const painel = document.getElementById("bastidores");
+  pararAnimacao();
+  painel.classList.remove("aberto");
+  painel.setAttribute("aria-hidden", "true");
+  document.querySelector(".veu").classList.remove("visivel");
+}
+
+function mostrarFerramenta(id) {
+  ferramentaAtual = id;
+  pararAnimacao();
+  const ferramenta = FERRAMENTAS[id];
+  const estrutura = ESTRUTURAS[ferramenta.estrutura];
+  const op = operacoes.porFerramenta[id];
+  const passos = op?.rastro?.passos || [];
+  const alvo = document.getElementById("explicacao");
+  alvo.innerHTML = `
+    <p class="tipo">${icone(estrutura.tipo)}${nomeDoTipo(estrutura.tipo)}</p>
+    <h3 class="nome-estrutura">${esc(estrutura.nome)}</h3>
+    <p>${esc(estrutura.oQue)}</p>
+    <p class="porque"><b>${esc(ferramenta.nome)}.</b> ${esc(ferramenta.porQue)}</p>
+    ${op ? `
+      <div class="operacao">
+        <p class="meta">${esc(op.titulo)} · versão ${op.modo === "classico" ? "clássica" : "modificada"}</p>
+        <div id="animacao"></div>
+        ${op.resultado ? `<p class="resultado">${esc(op.resultado)}</p>` : ""}
+        ${passos.length ? `
+          <details>
+            <summary>Ver os ${passos.length} passos em texto</summary>
+            <ol class="passos">${passos.slice(0, 200).map((p) => `<li>${esc(descreverPasso(p))}</li>`).join("")}</ol>
+          </details>` : ""}
+      </div>`
+    : `<p class="meta">Use esta ferramenta no site e volte aqui para ver a animação do que aconteceu.</p>`}`;
+  if (op) pararAnimacao = montarAnimacao(document.getElementById("animacao"), op);
+  renderizarMapa();
+  document.querySelector("#bastidores .corpo").scrollTop = 0;
+}
+
+function renderizarMapa() {
+  const linha = ([id, f]) => `
+    <li><button type="button" data-ferramenta="${id}" ${id === ferramentaAtual ? 'aria-current="true"' : ""}>
+      <span>${esc(f.nome)}</span><span class="meta">${esc(ESTRUTURAS[f.estrutura].nome)}</span>
+    </button></li>`;
+  const doTipo = (tipo) => Object.entries(FERRAMENTAS).filter(([, f]) => ESTRUTURAS[f.estrutura].tipo === tipo);
+  document.getElementById("mapa").innerHTML = `
+    <h3>O que cada ferramenta usa</h3>
+    ${["linear", "hierarquica"].map((tipo) => `
+      <p class="tipo">${icone(tipo)}${tipo === "linear" ? "Estruturas lineares" : "Estruturas hierárquicas"}</p>
+      <ul>${doTipo(tipo).map(linha).join("")}</ul>`).join("")}`;
+}
+
+/**
+ * Registra a última operação de uma ferramenta para os Bastidores.
+ * { ferramenta, titulo, rastro: {passos, comparacoes}, cena?: dados do desenho, resultado?: frase final }
+ */
 export function registrarOperacao(operacao) {
+  if (!FERRAMENTAS[operacao.ferramenta]) return;
   operacao.modo = modoAtual();
-  operacoes.unshift(operacao);
-  operacoes.splice(12);
-  const contador = document.querySelector("[data-contador]");
-  if (contador) contador.textContent = operacoes.length;
-  renderizarOperacoes();
-}
-
-const LIMITE_PASSOS = 200;
-const PASSOS_CHAVE = ["encontrado", "pico", "raiz", "move_inicio", "avanca", "transpoe", "caso", "desbalanceado"];
-
-function renderizarOperacoes() {
-  const alvo = document.getElementById("operacoes");
-  if (!alvo) return;
-  alvo.innerHTML = operacoes.map((op, indice) => {
-    const passos = op.rastro?.passos || [];
-    const numeros = [`${op.rastro?.comparacoes ?? 0} comparações`, `${passos.length} passos`, ...(op.resumo || [])];
-    return `
-      <section class="operacao">
-        <span class="estrutura">${esc(op.estrutura)} · ${op.modo === "classico" ? "clássica" : "modificada"}</span>
-        <h3>${esc(op.titulo)}</h3>
-        <span class="numeros num">${esc(numeros.join(" · "))}</span>
-        ${indice === 0 && passos.length ? `
-          <ol class="passos">
-            ${passos.slice(0, LIMITE_PASSOS).map((p) =>
-              `<li class="${PASSOS_CHAVE.includes(p.passo) ? "chave" : ""}">${esc(descreverPasso(p))}</li>`).join("")}
-          </ol>
-          ${passos.length > LIMITE_PASSOS ? `<p class="meta">… e mais ${passos.length - LIMITE_PASSOS} passos.</p>` : ""}` : ""}
-      </section>`;
-  }).join("");
-}
-
-const DIRECAO = { esquerda: "desce à esquerda", direita: "desce à direita", igual: "é igual — achou" };
-
-/** Frase em português para um passo do rastro. */
-export function descreverPasso(p) {
-  const no = nomeDoNo(p.no);
-  switch (p.passo) {
-    case "compara":
-      if (p.decisao === "sobe") return `Nível ${p.nivel}: “${no}” ainda é menor — sobe um nível`;
-      if (p.decisao === "perto") return `Nível ${p.nivel}: o próximo marco (“${no}”) já passa do alvo — está perto, parte do dedo`;
-      if (p.decisao === "longe") return `Nível ${p.nivel}: o próximo marco (“${no}”) ainda é menor — está longe, recomeça da cabeça`;
-      if (p.nivel !== undefined) {
-        return p.decisao === "avanca"
-          ? `Nível ${p.nivel}: “${no}” é menor — avança${p.largura ? ` (salta ${p.largura})` : ""}`
-          : `Nível ${p.nivel}: ${p.no === "sentinela" ? "chegou ao sentinela" : `“${no}” não é menor`} — desce`;
-      }
-      if (p.posicao !== undefined) return `Posição ${p.posicao}: compara com “${no}” — ${p.igual ? "achou" : "não é"}`;
-      if (p.meio !== undefined) return `Busca binária: meio = ${p.meio} (“${no}”), segue à ${p.decisao}`;
-      if (p.decisao === "visita") return `Visita ${no} (percurso em ordem)`;
-      return `Compara com “${no}”: ${DIRECAO[p.decisao] || p.decisao}`;
-    case "inicio": return `Começa na cabeça, no nível ${p.nivel}`;
-    case "encontrado": return `Encontrado: “${no}”${p.posicao ? ` (posição ${p.posicao})` : ""}`;
-    case "nao_encontrado": return "Não encontrado";
-    case "move_inicio": return `Move “${no}” da posição ${p.de} para o início`;
-    case "transpoe": return `Troca “${no}” com “${nomeDoNo(p.com)}” (posição ${p.de} → ${p.para})`;
-    case "pontua": return `“${no}” ganha 1 ponto — pontuação agora ${p.pontuacao}`;
-    case "avanca": return `“${no}” avança da posição ${p.de} para ${p.para}, ultrapassando ${p.ultrapassados.length} liga(s)`;
-    case "permanece": return `“${no}” permanece na posição ${p.posicao}`;
-    case "rotacao": return `Rotação à ${p.direcao} em “${no}”: “${nomeDoNo(p.pivo)}” sobe`;
-    case "caso": return `Caso ${p.caso} para “${nomeDoNo(p.alvo)}”`;
-    case "raiz": return `“${no}” agora é a raiz`;
-    case "acesso": return `Acesso ${p.contador} de ${p.limite} a “${no}”${p.contador < p.limite ? " — ainda não afunila" : " — afunila"}`;
-    case "desbalanceado": return `“${no}” desbalanceado (fator ${p.fator}): caso ${p.caso}`;
-    case "insere": return `Insere “${no}”`;
-    case "salta": return `Nível ${p.nivel}: salta para “${no}” (posição ${p.posicao})`;
-    case "desce": return `Desce do nível ${p.nivel}`;
-    case "percorre": return `Percorre ${p.nos} nós do nível 0, um a um, até a página pedida`;
-    case "divide": return `Primeiro nó dentro do período: ${no}`;
-    case "subarvore_inteira": return `Subárvore de ${no} cabe inteira no período — usa o máximo guardado (${formatarValor(p.max_sub)})`;
-    case "descarta": return `Descarta a subárvore de ${no} (fora do período)`;
-    case "segue_maximo": return `Segue o máximo até ${no}`;
-    case "pico": return `Pico: ${no} — ${formatarValor(p.valor)}`;
-    case "nivel_por_valor": return `Nível de “${no}” pelo valor: ${p.nivel}`;
-    case "sorteio": return `Moeda sorteou o nível ${p.nivel} para “${no}”`;
-    case "liga": return `Liga “${no}” no nível ${p.nivel}`;
-    case "desliga": return `Desliga “${no}” do nível ${p.nivel}`;
-    case "remove": return `Remove “${no}”`;
-    case "duplicada": return `“${no}” já está na estrutura`;
-    case "dedo": return `Parte do dedo, no nível ${p.nivel} (busca anterior: “${nomeDoNo(p.de)}”)`;
-    case "conta_subarvore": return `${no} e toda a sua subárvore esquerda são menores: soma ${p.quantidade} de uma vez (total ${p.total})`;
-    case "contagem": return `Diferença entre as duas posições: ${p.quantidade} na faixa`;
-    case "percorre_intervalo": return `Percorre os ${p.nos} jogadores da faixa, um a um, para contar`;
-    case "vizinhos": return `${p.sentido === "sucessores" ? "Sucessores (mais caros)" : "Predecessores (mais baratos)"}: ${p.quantidade} da mesma posição entre ${p.visitados} vizinhos`;
-    default: return `${p.passo} ${p.no ? no : ""}`;
+  operacoes.porFerramenta[operacao.ferramenta] = operacao;
+  operacoes.ultima = operacao.ferramenta;
+  guardarOperacoes();
+  const painel = document.getElementById("bastidores");
+  if (painel?.classList.contains("aberto")) {
+    if (ferramentaAtual === operacao.ferramenta) mostrarFerramenta(operacao.ferramenta);
+  } else {
+    document.querySelector("[data-novo]")?.classList.remove("oculto");
   }
 }
 
@@ -457,13 +440,13 @@ function renderizarLateral(dados) {
       </nav>`).join("")}
     ${dados.buscas.length ? `
       <nav aria-label="Buscas recentes">
-        <h2>Buscas recentes</h2>
+        <h2>Buscas recentes ${selo("buscas-recentes", { soIcone: true })}</h2>
         ${dados.buscas.map((termo) => `
           <a class="item fino" href="index.html?q=${encodeURIComponent(termo)}">${icone("relogio")}<span class="texto">${esc(termo)}</span></a>`).join("")}
       </nav>` : ""}
     ${dados.vistos.length ? `
       <nav aria-label="Vistos por você">
-        <h2>Vistos por você</h2>
+        <h2>Vistos por você ${selo("vistos", { soIcone: true })}</h2>
         ${dados.vistos.map((j) => `
           <a class="item fino" href="jogador.html?id=${j.id}">${fotoHTML(j.foto, j.nome, "avatar")}<span class="texto">${esc(j.nome)}</span></a>`).join("")}
       </nav>` : ""}`;
@@ -483,4 +466,6 @@ export function iniciarPagina(opcoes) {
   montarTopo(opcoes);
   montarBastidores();
   montarLateral();
+  // Marcadores <span data-selo-de="ferramenta"> do HTML viram selos clicáveis.
+  document.querySelectorAll("[data-selo-de]").forEach((marcador) => { marcador.outerHTML = selo(marcador.dataset.seloDe); });
 }

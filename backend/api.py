@@ -23,8 +23,8 @@ from .dados.modelos import normalizar
 from .estruturas.avl import ArvoreAVL
 from .estruturas.ordenacao import merge_sort
 from .estruturas.rastro import Rastro, rotulo
-from .visualizacao import (dados_no_historico, dados_no_jogador, itens_ligas, nos_skip,
-                           recorte_arvore)
+from .visualizacao import (dados_no_historico, dados_no_jogador, dados_no_valor, itens_ligas,
+                           nos_skip, recorte_arvore)
 
 RAIZ = Path(__file__).resolve().parent.parent
 log = logging.getLogger("uvicorn.error")
@@ -208,9 +208,14 @@ async def acessar_jogador(request: Request, jogador_id: int, modo: Modo = "modif
     rastro = Rastro()
     arvore.buscar(jogador.chave, rastro)
     depois = recorte_arvore(arvore, [jogador.chave], profundidade=3, dados_no=dados_no_jogador)
-    base.registrar_frequente(jogador)
+    vistos_antes = [{"id": j.id, "nome": j.nome} for _, j in base.frequentes]
+    rastro_vistos = Rastro()
+    base.registrar_frequente(jogador, rastro=rastro_vistos)
     return {"modo": modo, "alvo": rotulo(jogador.chave), "antes": antes, "depois": depois,
-            "rastro": rastro.para_json()}
+            "rastro": rastro.para_json(),
+            "vistos": {"antes": vistos_antes,
+                       "depois": [{"id": j.id, "nome": j.nome} for _, j in base.frequentes],
+                       "rastro": rastro_vistos.para_json()}}
 
 
 @app.get("/api/em-alta", tags=["jogadores"], summary="Jogadores no topo da árvore de busca")
@@ -312,8 +317,10 @@ async def parecidos(request: Request, jogador_id: int):
     base = obter_base(request)
     jogador = obter_jogador(base, jogador_id)
     rastro = Rastro()
+    chave = (jogador.valor or 0, jogador.id)
     return {"jogadores": [j.resumo() for j in base.parecidos(jogador, rastro=rastro)],
-            "rastro": rastro.para_json()}
+            "rastro": rastro.para_json(),
+            "arvore": recorte_arvore(base.por_valor, [chave], profundidade=2, dados_no=dados_no_valor)}
 
 
 # ------------------------------------------------------------------ ferramentas
@@ -363,8 +370,9 @@ async def remover_da_lista(request: Request, jogador_id: int, modo: Modo = "modi
 async def registrar_busca(request: Request, q: str = Query(..., min_length=1, max_length=60)):
     base = obter_base(request)
     rastro = Rastro()
+    antes = base.buscas.chaves()
     base.registrar_busca(q, rastro=rastro)
-    return {"buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
+    return {"antes": antes, "buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
 
 
 @app.get("/api/faixa", tags=["ferramentas"],
@@ -383,6 +391,8 @@ async def faixa_de_valor(request: Request, minimo: int = Query(0, ge=0), maximo:
         "mais_barato": mais_barato.resumo() if mais_barato else None,
         "mais_caro": mais_caro.resumo() if mais_caro else None,
         "rastro": rastro.para_json(),
+        "arvore": recorte_arvore(base.por_valor, [(minimo, -1), (maximo, float("inf"))],
+                                 profundidade=2, dados_no=dados_no_valor),
     }
 
 
