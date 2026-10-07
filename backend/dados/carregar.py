@@ -15,6 +15,7 @@ from pathlib import Path
 from ..estruturas.avl import ArvoreAVL
 from ..estruturas.avl_aumentada import ArvoreAVLAumentada
 from ..estruturas.avl_ordem import ArvoreAVLOrdem
+from ..estruturas.lista_encadeada import ListaEncadeada
 from ..estruturas.lista_mtf import ListaMTF
 from ..estruturas.lista_ordenada import ListaOrdenada
 from ..estruturas.lista_transposicao import ListaTransposicao
@@ -28,7 +29,15 @@ from ..estruturas.splay_condicional import ArvoreAfuniladaCondicional
 from .modelos import Clube, Jogador, Liga, Transferencia, normalizar
 
 PASTA_DADOS = Path(__file__).resolve().parents[2] / "dados"
-QUANTOS_AQUECER = 30  # jogadores mais valiosos já "em alta" quando o servidor sobe
+
+# Critérios de afinidade entre jogadores: (nome, peso, função que dá o grupo do jogador).
+# O grupo é o começo da chave na árvore de afinidades; quem está no mesmo
+# grupo fica lado a lado nela.
+CRITERIOS_DE_AFINIDADE = (
+    ("clube", 3, lambda j: f"clube:{j.clube_id}" if j.clube_id else None),
+    ("liga", 2, lambda j: f"liga:{j.liga_id}:{j.sub_posicao}" if j.liga_id and j.sub_posicao else None),
+    ("pais", 2, lambda j: f"pais:{j.cidadania}:{j.posicao}" if j.cidadania and j.posicao else None),
+)
 
 
 def valor_de_mercado(jogador):
@@ -84,6 +93,8 @@ class BaseDeDados:
         self.minha_lista = SkipListValor(valor_de_mercado)  # lista de observação do usuário
         self.minha_lista_classica = SkipList(semente=7)
         self.buscas = ListaMTF()  # termos buscados: movimentação para o início clássica
+        # (grupo, -valor, id) -> Jogador ativo; um nó por critério de afinidade
+        self.afinidades = ArvoreAVL()
         self.temporada_atual = None
         self.ligas_ignoradas = []
         self.tempos = []  # (etapa, segundos)
@@ -151,6 +162,92 @@ class BaseDeDados:
         if len(self.buscas) >= limite:
             self.buscas.remover_ultimo(rastro)
         self.buscas.inserir_no_inicio(termo, termo, rastro)
+
+    def limpar_buscas(self, rastro=None):
+        self.buscas.esvaziar(rastro)
+
+    def em_alta(self, quantos=6, rastro=None):
+        """Os jogadores mais valiosos em atividade: busca da maior chave na
+        árvore por valor (sempre à direita) e, dali, os predecessores."""
+        r = rastro or RASTRO_NULO
+        r.registrar("etapa", nome="maior")
+        resultado = []
+        for _, jogador in self.por_valor.iterar_antes_de((math.inf,), r):
+            resultado.append(jogador)
+            if len(resultado) >= quantos:
+                break
+        r.registrar("maiores", quantidade=len(resultado))
+        return resultado
+
+    def recomendar(self, fontes, por_criterio=6, limite=8, por_motivo=None, rastro=None):
+        """Recomenda jogadores a partir dos perfis abertos (`fontes`, do mais
+        para o menos revisitado). Devolve triplas (jogador, critério, fonte).
+
+        Na árvore de afinidades a chave começa pelo grupo ("clube:281",
+        "liga:GB1:Centre-Forward", "pais:Norway:Attack") e segue com o valor
+        em ordem decrescente. Assim, os jogadores de um grupo são vizinhos e os
+        mais valiosos vêm primeiro: uma busca de teto pelo grupo e alguns
+        sucessores bastam.
+
+        Cada candidato soma pontos por critério em que combina com uma fonte
+        (clube pesa mais). Quem combina em vários critérios, ou com vários
+        perfis, sobe na lista. Para variar, há um teto de recomendações por
+        fonte e por motivo. O rastro registra as buscas da primeira fonte."""
+        r = rastro or RASTRO_NULO
+        if not fontes:
+            return []
+        por_fonte = -(-limite // len(fontes))  # divide as vagas entre os perfis (arredonda para cima)
+        if por_motivo is None:
+            por_motivo = 3 if len(fontes) == 1 else 2
+        candidatos = ListaEncadeada()  # id -> [jogador, pontos, pontos do melhor motivo, critério, fonte]
+        for indice, fonte in enumerate(fontes):
+            tracar = r if indice == 0 else RASTRO_NULO
+            for criterio, peso, grupo_de in CRITERIOS_DE_AFINIDADE:
+                grupo = grupo_de(fonte)
+                if grupo is None:
+                    continue
+                tracar.registrar("etapa", nome=criterio)
+                achados = 0
+                for chave, outro in self.afinidades.iterar_a_partir_de((grupo,), tracar):
+                    if chave[0] != grupo or achados >= por_criterio:
+                        break
+                    if any(outro.id == f.id for f in fontes):
+                        continue  # não recomenda quem o usuário já abriu
+                    achados += 1
+                    registro = candidatos.consultar(outro.id)
+                    if registro is None:
+                        registro = [outro, 0, 0, None, None]
+                        candidatos.inserir_no_inicio(outro.id, registro)
+                    pontos = peso
+                    registro[1] += pontos
+                    if pontos > registro[2]:
+                        registro[2], registro[3], registro[4] = pontos, criterio, fonte
+                tracar.registrar("grupo", nome=criterio, quantidade=achados)
+        ordenados = merge_sort([registro for _, registro in candidatos],
+                               chave=lambda reg: (-reg[1], -valor_de_mercado(reg[0])))
+        # Variedade: tetos por motivo (critério + fonte) e por fonte.
+        resultado, contagem = [], []  # contagem: pares [rótulo, quantos]
+
+        def cabe(rotulo, teto):
+            par = next((c for c in contagem if c[0] == rotulo), None)
+            if par is None:
+                par = [rotulo, 0]
+                contagem.append(par)
+            if par[1] >= teto:
+                return None
+            return par
+
+        for jogador, _, _, criterio, fonte in ordenados:
+            do_motivo = cabe((criterio, fonte.id), por_motivo)
+            da_fonte = cabe(fonte.id, por_fonte)
+            if do_motivo is None or da_fonte is None:
+                continue
+            do_motivo[1] += 1
+            da_fonte[1] += 1
+            resultado.append((jogador, criterio, fonte))
+            if len(resultado) >= limite:
+                break
+        return resultado
 
     def faixa_de_valor(self, minimo, maximo, pagina=1, por_pagina=24, classica=False, rastro=None):
         """Jogadores ativos com minimo <= valor <= maximo, do mais caro ao mais
@@ -247,6 +344,7 @@ class BaseDeDados:
             f"Transferências: {len(self.transferencias)} registros",
             f"Splay de busca: {len(self.busca)} nós, altura {self.busca.altura()}",
             f"Árvore por valor: {len(self.por_valor)} jogadores, altura {self.por_valor.altura()}",
+            f"Árvore de afinidades: {len(self.afinidades)} nós, altura {self.afinidades.altura()}",
         ]
         for _, liga in self.ligas:
             linhas.append(
@@ -272,6 +370,7 @@ def carregar(pasta=PASTA_DADOS):
     medir("ligas", _carregar_ligas)
     medir("busca", _montar_busca)
     medir("por valor", _montar_por_valor)
+    medir("afinidades", _montar_afinidades)
     medir("valores", _carregar_valores)
     medir("transferências", _carregar_transferencias)
     return base
@@ -398,16 +497,6 @@ def _montar_busca(base, pasta):
     base.busca.construir_de_ordenados(pares)
     base.busca_classica.construir_de_ordenados(pares)
 
-    # Aquecimento: a árvore balanceada por nome não diz nada sobre
-    # popularidade. Os mais valiosos são acessados como se tivessem sido
-    # procurados (K vezes na condicional), do menos para o mais valioso, para
-    # que "Em alta" comece com eles e o mais valioso fique na raiz.
-    ativos = [j for _, j in base.jogadores if j.ativo]
-    for jogador in reversed(merge_sort(ativos, chave=lambda j: -valor_de_mercado(j))[:QUANTOS_AQUECER]):
-        for _ in range(base.busca.limite):
-            base.busca.buscar(jogador.chave)
-        base.busca_classica.buscar(jogador.chave)
-
     # Índice do autocompletar: o nome a partir de cada palavra
     # ("erling haaland" e "haaland"), para achar também pelo sobrenome.
     trechos = []
@@ -430,6 +519,20 @@ def _montar_por_valor(base, pasta):
         limiares.append(pares[n - n // (2 ** k)][0][0])
         k += 1
     base.minha_lista = SkipListValor(valor_de_mercado, limiares=limiares)
+
+
+def _montar_afinidades(base, pasta):
+    """Árvore de afinidades: cada jogador ativo entra uma vez por critério,
+    com a chave (grupo, -valor, id)."""
+    pares = []
+    for _, jogador in base.jogadores:
+        if not jogador.ativo:
+            continue
+        for _, _, grupo_de in CRITERIOS_DE_AFINIDADE:
+            grupo = grupo_de(jogador)
+            if grupo is not None:
+                pares.append(((grupo, -valor_de_mercado(jogador), jogador.id), jogador))
+    base.afinidades.construir_de_ordenados(merge_sort(pares, chave=lambda par: par[0]))
 
 
 def _carregar_valores(base, pasta):

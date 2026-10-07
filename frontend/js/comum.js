@@ -2,10 +2,10 @@
 // "Bastidores" — onde ficam os detalhes técnicos (passos de cada operação e a
 // escolha entre as versões modificada e clássica das estruturas).
 
-import { api, definirModo, modoAtual } from "./api.js?v=4";
-import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=4";
+import { api, definirModo, modoAtual } from "./api.js?v=5";
+import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=5";
 
-import { ESTRUTURAS, FERRAMENTAS, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=4";
+import { ESTRUTURAS, FERRAMENTAS, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=5";
 
 export { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo, selo };
 
@@ -54,13 +54,14 @@ document.addEventListener("error", (evento) => {
   img.replaceWith(div);
 }, true);
 
-export function cardJogador(j, i = 0) {
+/** Card de jogador. `legenda` troca a linha do clube (ex.: o motivo de uma recomendação). */
+export function cardJogador(j, i = 0, legenda = null) {
   return `
     <a class="card entrar" href="jogador.html?id=${j.id}" style="--i:${Math.min(i, 16)}">
       ${fotoHTML(j.foto, j.nome)}
       <div>
         <div class="nome">${esc(j.nome)}</div>
-        <div class="sub">${esc(j.clube_nome || traduzirPosicao(j.posicao))}</div>
+        <div class="sub${legenda ? " motivo" : ""}">${esc(legenda || j.clube_nome || traduzirPosicao(j.posicao))}</div>
       </div>
       <div class="num">${formatarValor(j.valor)}</div>
     </a>`;
@@ -204,7 +205,8 @@ export function montarBusca(caixa, { grande = false } = {}) {
         entrada.setAttribute("aria-expanded", "true");
         registrarOperacao({
           ferramenta: "busca",
-          titulo: `Sugestões para “${q}”`,
+          acao: true,
+          titulo: `Busca por “${q}”`,
           rastro: resposta.rastro,
           resultado: `${resposta.rastro.comparacoes} comparações para chegar às sugestões de “${q}”.`,
         });
@@ -240,10 +242,11 @@ let ferramentaAtual = null;
 let pararAnimacao = () => {};
 
 function lerOperacoes() {
+  const vazio = { porFerramenta: {}, ultima: null, historico: [] };
   try {
-    return JSON.parse(sessionStorage.getItem(CHAVE_OPERACOES)) || { porFerramenta: {}, ultima: null };
+    return { ...vazio, ...JSON.parse(sessionStorage.getItem(CHAVE_OPERACOES)) };
   } catch {
-    return { porFerramenta: {}, ultima: null };
+    return vazio;
   }
 }
 
@@ -265,6 +268,7 @@ function montarBastidores() {
       </header>
       <div class="corpo">
         <section id="explicacao"></section>
+        <section class="mapa" id="acoes"></section>
         <section class="mapa" id="mapa"></section>
         <div class="versao">
           <span class="meta">Versão das estruturas (para comparar)</span>
@@ -289,10 +293,11 @@ function montarBastidores() {
       abrirBastidores(alvo.dataset.selo);
     }
   });
-  painel.querySelector("#mapa").addEventListener("click", (e) => {
+  painel.querySelector(".corpo").addEventListener("click", (e) => {
     const linha = e.target.closest("[data-ferramenta]");
     if (linha) mostrarFerramenta(linha.dataset.ferramenta);
   });
+  montarAviso();
 
   const botoesModo = painel.querySelectorAll("[data-modo]");
   const marcarModo = () => botoesModo.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.modo === modoAtual())));
@@ -338,7 +343,7 @@ function mostrarFerramenta(id) {
     <p class="porque"><b>${esc(ferramenta.nome)}.</b> ${esc(ferramenta.porQue)}</p>
     ${op ? `
       <div class="operacao">
-        <p class="meta">${esc(op.titulo)} · versão ${op.modo === "classico" ? "clássica" : "modificada"}</p>
+        <p class="acao-feita"><span class="meta">Sua ação${op.modo === "classico" ? " · versão clássica" : ""}</span><b>${esc(op.titulo)}</b></p>
         <div id="animacao"></div>
         ${op.resultado ? `<p class="resultado">${esc(op.resultado)}</p>` : ""}
         ${passos.length ? `
@@ -347,10 +352,30 @@ function mostrarFerramenta(id) {
             <ol class="passos">${passos.slice(0, 200).map((p) => `<li>${esc(descreverPasso(p))}</li>`).join("")}</ol>
           </details>` : ""}
       </div>`
-    : `<p class="meta">Use esta ferramenta no site e volte aqui para ver a animação do que aconteceu.</p>`}`;
+    : `
+      <div class="operacao">
+        <p class="meta">Você ainda não usou esta ferramenta. Use-a e a animação do que aconteceu aparece aqui.</p>
+        ${ferramenta.onde ? `<a class="botao" href="${esc(ferramenta.onde.href)}">${esc(ferramenta.onde.texto)}</a>` : ""}
+      </div>`}`;
   if (op) pararAnimacao = montarAnimacao(document.getElementById("animacao"), op);
+  renderizarAcoes();
   renderizarMapa();
   document.querySelector("#bastidores .corpo").scrollTop = 0;
+}
+
+/** Histórico: as últimas ações do usuário e a estrutura que cada uma usou. */
+function renderizarAcoes() {
+  const alvo = document.getElementById("acoes");
+  if (!operacoes.historico.length) {
+    alvo.innerHTML = "";
+    return;
+  }
+  alvo.innerHTML = `
+    <h3>Suas últimas ações</h3>
+    <ul>${operacoes.historico.map((a) => `
+      <li><button type="button" data-ferramenta="${esc(a.ferramenta)}" ${a.ferramenta === ferramentaAtual ? 'aria-current="true"' : ""}>
+        <span>${esc(a.titulo)}</span><span class="meta">${esc(ESTRUTURAS[FERRAMENTAS[a.ferramenta].estrutura].nome)}</span>
+      </button></li>`).join("")}</ul>`;
 }
 
 function renderizarMapa() {
@@ -368,20 +393,73 @@ function renderizarMapa() {
 
 /**
  * Registra a última operação de uma ferramenta para os Bastidores.
- * { ferramenta, titulo, rastro: {passos, comparacoes}, cena?: dados do desenho, resultado?: frase final }
+ * { ferramenta, titulo, rastro: {passos, comparacoes}, cena?: dados do desenho,
+ *   resultado?: frase final, acao?: true se veio de uma ação direta do usuário }
+ * Ações diretas entram no histórico e mostram o aviso "você acabou de usar…".
  */
 export function registrarOperacao(operacao) {
   if (!FERRAMENTAS[operacao.ferramenta]) return;
-  operacao.modo = modoAtual();
-  operacoes.porFerramenta[operacao.ferramenta] = operacao;
-  operacoes.ultima = operacao.ferramenta;
+  const { acao, ...op } = operacao;
+  op.modo = modoAtual();
+  operacoes.porFerramenta[op.ferramenta] = op;
+  operacoes.ultima = op.ferramenta;
+  if (acao) {
+    // Repetições seguidas da mesma ferramenta (digitar, arrastar) ocupam uma linha só.
+    if (operacoes.historico[0]?.ferramenta === op.ferramenta) operacoes.historico.shift();
+    operacoes.historico.unshift({ ferramenta: op.ferramenta, titulo: op.titulo });
+    operacoes.historico.splice(8);
+  }
   guardarOperacoes();
   const painel = document.getElementById("bastidores");
   if (painel?.classList.contains("aberto")) {
-    if (ferramentaAtual === operacao.ferramenta) mostrarFerramenta(operacao.ferramenta);
-  } else {
-    document.querySelector("[data-novo]")?.classList.remove("oculto");
+    if (ferramentaAtual === op.ferramenta) mostrarFerramenta(op.ferramenta);
+    return;
   }
+  document.querySelector("[data-novo]")?.classList.remove("oculto");
+  if (acao) mostrarAviso(op);
+}
+
+// ------------------------------------------------- aviso "você acabou de usar"
+let relogioAviso = null;
+
+function montarAviso() {
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="aviso-uso" id="aviso-uso" role="status" aria-live="polite">
+      <span data-icone></span>
+      <div class="texto">
+        <span class="meta">Você acabou de usar</span>
+        <b data-estrutura></b>
+        <span class="meta" data-titulo></span>
+      </div>
+      <button class="botao pequeno" data-ver>Ver como</button>
+      <button class="botao icone-so" data-dispensar aria-label="Dispensar">${icone("fechar")}</button>
+    </div>`);
+  const aviso = document.getElementById("aviso-uso");
+  aviso.querySelector("[data-ver]").addEventListener("click", () => {
+    esconderAviso();
+    abrirBastidores(aviso.dataset.ferramenta);
+  });
+  aviso.querySelector("[data-dispensar]").addEventListener("click", esconderAviso);
+  aviso.addEventListener("mouseenter", () => clearTimeout(relogioAviso));
+  aviso.addEventListener("mouseleave", () => { relogioAviso = setTimeout(esconderAviso, 3000); });
+}
+
+function mostrarAviso(op) {
+  const aviso = document.getElementById("aviso-uso");
+  if (!aviso) return;
+  const estrutura = ESTRUTURAS[FERRAMENTAS[op.ferramenta].estrutura];
+  aviso.dataset.ferramenta = op.ferramenta;
+  aviso.querySelector("[data-icone]").innerHTML = icone(estrutura.tipo);
+  aviso.querySelector("[data-estrutura]").textContent = estrutura.nome;
+  aviso.querySelector("[data-titulo]").textContent = op.titulo;
+  aviso.classList.add("visivel");
+  clearTimeout(relogioAviso);
+  relogioAviso = setTimeout(esconderAviso, 7000);
+}
+
+function esconderAviso() {
+  clearTimeout(relogioAviso);
+  document.getElementById("aviso-uso")?.classList.remove("visivel");
 }
 
 // --------------------------------------------------------------- frequentes
@@ -419,6 +497,25 @@ function montarLateral() {
   document.querySelector("[data-menu]").addEventListener("click", () => abrirFechar(true));
   veu.addEventListener("click", () => abrirFechar(false));
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") abrirFechar(false); });
+  lateral.addEventListener("click", async (e) => {
+    if (!e.target.closest("[data-limpar-buscas]")) return;
+    try {
+      const resposta = await api.limparBuscas();
+      const itens = (termos) => termos.map((t) => ({ id: t, rotulo: t, titulo: t }));
+      const n = resposta.antes.length;
+      registrarOperacao({
+        ferramenta: "buscas-recentes",
+        acao: true,
+        titulo: "Limpar as buscas recentes",
+        rastro: resposta.rastro,
+        cena: { antes: itens(resposta.antes), depois: [] },
+        resultado: `${n === 1 ? "A busca foi apagada" : `As ${n} buscas foram apagadas`} de uma vez, sem percorrer a lista.`,
+      });
+      atualizarLateral();
+    } catch {
+      /* a lista continua como estava */
+    }
+  });
   renderizarLateral({ minha_lista: 0, buscas: [], vistos: [] });
   atualizarLateral();
 }
@@ -443,6 +540,7 @@ function renderizarLateral(dados) {
         <h2>Buscas recentes ${selo("buscas-recentes", { soIcone: true })}</h2>
         ${dados.buscas.map((termo) => `
           <a class="item fino" href="index.html?q=${encodeURIComponent(termo)}">${icone("relogio")}<span class="texto">${esc(termo)}</span></a>`).join("")}
+        <button class="limpar" type="button" data-limpar-buscas>Limpar buscas</button>
       </nav>` : ""}
     ${dados.vistos.length ? `
       <nav aria-label="Vistos por você">

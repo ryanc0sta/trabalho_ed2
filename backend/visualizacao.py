@@ -65,6 +65,11 @@ def dados_no_valor(no):
     return {"nome": no.valor.nome, "valor": no.valor.valor, "tam": no.tam}
 
 
+def dados_no_afinidade(no):
+    """Nó da árvore de afinidades (chave = (grupo, -valor, id), valor = Jogador)."""
+    return {"nome": no.valor.nome, "valor": no.valor.valor, "grupo": no.chave[0]}
+
+
 # ----------------------------------------------------------------------- listas
 def itens_ligas(lista):
     """Ligas na ordem atual da lista (com a pontuação, se for a ponderada)."""

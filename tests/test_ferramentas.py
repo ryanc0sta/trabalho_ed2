@@ -32,6 +32,17 @@ def test_inserir_no_inicio_e_remover_ultimo():
     assert lista.remover_ultimo() is None and lista.cabeca is None
 
 
+def test_esvaziar_lista():
+    lista = ListaMTF()
+    for termo in ("a", "b", "c"):
+        lista.inserir(termo, termo)
+    rastro = Rastro()
+    lista.esvaziar(rastro)
+    assert len(lista) == 0 and lista.chaves() == [] and lista.buscar("a") is None
+    assert rastro.passos == [{"passo": "esvazia", "quantidade": 3}]
+    assert lista.inserir_no_inicio("d", "d") and lista.chaves() == ["d"]
+
+
 # ----------------------------------------------- árvore: vizinhos em ordem
 @pytest.mark.parametrize("classe", [ArvoreBinariaBusca, ArvoreAVL, ArvoreAfunilada])
 def test_iterar_nos_dois_sentidos(classe):

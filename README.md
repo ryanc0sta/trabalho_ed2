@@ -34,10 +34,13 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | Ferramenta | Onde | Estrutura e operação |
 |---|---|---|
 | Minha lista | botão na página do jogador + `lista.html` | Skip List: **inserção e remoção** (nível pelo valor, larguras atualizadas) |
-| Buscas recentes | barra lateral | Lista com **movimentação para o início clássica** (inserção no início, remoção do último) |
+| Buscas recentes | barra lateral | Lista com **movimentação para o início clássica** (inserção no início, remoção do último; "Limpar buscas" esvazia a lista em θ(1)) |
 | Faixa de valor | `faixa.html` | AVL por valor: **intervalo**, **piso**, **teto** e contagem pelo tamanho da subárvore |
 | Ir para um nome | página da liga | Skip List: **busca de teto** + **busca dedilhada** ao digitar letra a letra |
 | Parecidos | página do jogador | AVL por valor: **sucessores e predecessores** |
+| Em alta | página inicial | AVL por valor: **busca da maior chave** e predecessores (os mais valiosos; não muda com as visitas) |
+| Recomendados para você | página inicial | **AVL com chave composta** `(grupo, -valor, id)`: uma busca de teto por afinidade (clube, posição + liga, país + posição) de cada perfil aberto |
+| Abrir um perfil | página do jogador | **Árvore afunilada condicional**: o jogador é achado pelo nome e vai à raiz na 3ª visita |
 | Vistos por você | barra lateral | Lista com transposição |
 
 ### Como o site mostra qual estrutura cada ferramenta usa
@@ -48,6 +51,10 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
   estrutura, por que ela foi usada ali e uma **animação da última operação**, com uma frase por passo
   e controles de tocar, pausar e avançar. A animação é montada a partir do rastro real devolvido pelo
   servidor — não é uma simulação.
+- Depois de cada ação aparece um **aviso** ("Você acabou de usar: Lista com saltos") com o botão
+  "Ver como", que abre a animação daquela ação.
+- A animação tem uma **barra para arrastar** pelos passos e aceita as setas ← → e a barra de espaço.
+- **"Suas últimas ações"** lista as ações recentes e a estrutura que cada uma usou.
 - No fim do painel, o mapa **"O que cada ferramenta usa"** lista todas as ferramentas, separadas em
   estruturas lineares e hierárquicas, e o seletor de versão (modificada ou clássica) para comparar.
 
@@ -55,7 +62,7 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 |---|---|
 | Lista encadeada (itens que se reordenam) | Ligas mais visitadas, Buscas recentes, Vistos por você |
 | Torres da lista com saltos (cursor descendo os níveis) | Destaques e páginas da liga, Ir para um nome, Minha lista |
-| Árvore (caminho, rotações, ramos aproveitados inteiros) | Em alta, Valor numa data e pico, Faixa de valor, Parecidos |
+| Árvore (caminho, rotações, ramos aproveitados inteiros) | Abrir um perfil, Em alta, Recomendados, Valor numa data e pico, Faixa de valor, Parecidos |
 | Busca binária (barras que caem pela metade) | Buscar jogador |
 
 ## Dados usados (backend/dados)
@@ -108,7 +115,7 @@ Rotas com `modo` aceitam `modificado` (padrão) ou `classico`. As que executam u
 | `GET /api/ligas/{id}/jogadores?nivel=&pagina=` | Skip List: um nível, paginado (larguras) |
 | `GET /api/ligas/{id}/estrutura` · `GET /api/ligas/{id}/localizar/{jogador}` | Recorte da Skip List para desenhar; descida de uma busca |
 | `GET /api/busca?q=` | Lista ordenada de trechos do nome (autocompletar) |
-| `POST /api/jogadores/{id}/acessar` · `GET /api/em-alta` | Splay condicional / clássica (recorte antes e depois) |
+| `POST /api/jogadores/{id}/acessar` | Splay condicional / clássica (recorte antes e depois) + lista de vistos |
 | `GET /api/frequentes` | Lista com transposição |
 | `GET /api/jogadores/{id}` · `/valor?data=` · `/pico?de=&ate=` | AVL aumentada do histórico |
 | `GET /api/clubes/{id}` | AVL de clubes |
@@ -117,3 +124,6 @@ Rotas com `modo` aceitam `modificado` (padrão) ou `classico`. As que executam u
 | `GET /api/faixa?minimo=&maximo=` | AVL por valor com tamanho da subárvore |
 | `GET /api/ligas/{id}/ir-para?q=` | Skip List: teto + busca dedilhada |
 | `GET /api/jogadores/{id}/parecidos` | AVL por valor: vizinhos em ordem |
+| `GET /api/em-alta` | AVL por valor: maior chave e predecessores |
+| `GET /api/recomendados?jogador_id=` | AVL de afinidades (chave composta) |
+| `DELETE /api/buscas` | Esvazia a lista de buscas recentes |

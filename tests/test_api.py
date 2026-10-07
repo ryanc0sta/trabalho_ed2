@@ -96,9 +96,39 @@ def test_acessar_jogador_splay_condicional_e_frequentes(cliente):
 
 
 def test_em_alta(cliente):
-    resposta = cliente.get("/api/em-alta?niveis=2").json()
-    assert len(resposta["niveis"]) == 2
-    assert resposta["arvore"]["id"] == "nicolo barella|5"
+    resposta = cliente.get("/api/em-alta?quantos=2").json()
+    assert [j["nome"] for j in resposta["jogadores"]] == ["Erling Haaland", "Bukayo Saka"]
+    assert resposta["rastro"]["passos"][0] == {"passo": "etapa", "nome": "maior"}
+    assert "tam" in resposta["arvore"]
+
+
+def test_recomendados(cliente):
+    de_um = cliente.get("/api/recomendados?jogador_id=2").json()
+    assert [f["nome"] for f in de_um["fontes"]] == ["Bukayo Saka"]
+    assert [(j["nome"], j["motivo"]) for j in de_um["jogadores"]] == [
+        ("Markus Haaland", "Mesmo clube de Bukayo Saka"),
+        ("Erling Haaland", "Mesma posição e liga de Bukayo Saka"),
+        ("Bukayo Saka", "Mesmo país e posição de Bukayo Saka"),
+    ]
+    assert de_um["arvore"]["grupo"] and any(p["passo"] == "grupo" for p in de_um["rastro"]["passos"])
+    # Sem jogador: usa os perfis já abertos (a lista de vistos).
+    vistos = [j["id"] for j in cliente.get("/api/frequentes").json()["jogadores"]]
+    geral = cliente.get("/api/recomendados").json()
+    assert [f["id"] for f in geral["fontes"]] == vistos[:3]
+    assert not {j["id"] for j in geral["jogadores"]} & {f["id"] for f in geral["fontes"]}
+    assert cliente.get("/api/recomendados?jogador_id=999999").status_code == 404
+
+
+def test_limpar_buscas(cliente):
+    cliente.post("/api/buscas?q=um")
+    cliente.post("/api/buscas?q=dois")
+    resposta = cliente.delete("/api/buscas").json()
+    assert "dois" in resposta["antes"] and resposta["buscas"] == []
+    assert resposta["rastro"]["passos"][0]["passo"] == "esvazia"
+    assert cliente.get("/api/lateral").json()["buscas"] == []
+    cliente.post("/api/buscas?q=de novo")  # a lista continua funcionando depois de limpa
+    assert cliente.get("/api/lateral").json()["buscas"] == ["de novo"]
+    cliente.delete("/api/buscas")  # não deixa termos para os outros testes
 
 
 def test_jogador_historico_valor_e_pico(cliente):

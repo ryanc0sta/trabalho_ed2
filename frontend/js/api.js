@@ -48,7 +48,7 @@ export const api = {
   localizar: (ligaId, jogadorId) => pedir(`/ligas/${ligaId}/localizar/${jogadorId}`, { params: comModo() }),
   busca: (q, limite = 8) => pedir("/busca", { params: { q, limite } }),
   acessarJogador: (id) => pedir(`/jogadores/${id}/acessar`, { metodo: "POST", params: comModo() }),
-  emAlta: (niveis = 3) => pedir("/em-alta", { params: comModo({ niveis }) }),
+  emAlta: (quantos = 6) => pedir("/em-alta", { params: { quantos } }),
   frequentes: () => pedir("/frequentes"),
   jogador: (id) => pedir(`/jogadores/${id}`),
   valorEm: (id, data) => pedir(`/jogadores/${id}/valor`, { params: { data } }),
@@ -60,6 +60,8 @@ export const api = {
   adicionarALista: (id) => pedir(`/minha-lista/${id}`, { metodo: "PUT", params: comModo() }),
   removerDaLista: (id) => pedir(`/minha-lista/${id}`, { metodo: "DELETE", params: comModo() }),
   registrarBusca: (q) => pedir("/buscas", { metodo: "POST", params: { q } }),
+  limparBuscas: () => pedir("/buscas", { metodo: "DELETE" }),
+  recomendados: (jogadorId) => pedir("/recomendados", { params: { jogador_id: jogadorId } }),
   faixa: (minimo, maximo, pagina, porPagina = 24) =>
     pedir("/faixa", { params: comModo({ minimo, maximo, pagina, por_pagina: porPagina }) }),
   irPara: (ligaId, q, porPagina = 24) =>

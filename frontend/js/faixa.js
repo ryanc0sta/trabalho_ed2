@@ -2,11 +2,11 @@
 // Usa a árvore por valor: contagem pela diferença de posições (tamanho das
 // subárvores), página selecionada pela posição, e piso/teto para os extremos.
 
-import { api } from "./api.js?v=4";
+import { api } from "./api.js?v=5";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=4";
+} from "./comum.js?v=5";
 
 iniciarPagina();
 
@@ -82,6 +82,7 @@ async function carregar() {
     renderizarPaginacao(dados);
     registrarOperacao({
       ferramenta: "faixa",
+      acao: true,
       titulo: `Jogadores ${faixa}`,
       rastro: dados.rastro,
       cena: { arvore: dados.arvore },

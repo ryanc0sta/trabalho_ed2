@@ -6,7 +6,7 @@
 //
 // Cenas: lista (encadeada), torres (lista com saltos), árvore e vetor (busca binária).
 
-import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=4";
+import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=5";
 
 // ---------------------------------------------------------------- catálogo
 export const ESTRUTURAS = {
@@ -38,51 +38,76 @@ export const ESTRUTURAS = {
     nome: "Árvore AVL", tipo: "hierarquica",
     oQue: "Uma árvore de busca que se mantém sempre equilibrada: cada comparação descarta metade do que falta olhar.",
   },
+  "avl-composta": {
+    nome: "Árvore AVL com chave composta", tipo: "hierarquica",
+    oQue: "Uma árvore de busca equilibrada em que a chave tem partes: primeiro o grupo, depois o valor. Tudo o que é do mesmo grupo fica lado a lado, já em ordem.",
+  },
 };
 
 export const FERRAMENTAS = {
   busca: {
     nome: "Buscar jogador", estrutura: "lista-ordenada", cena: "vetor",
+    onde: { texto: "Buscar na página inicial", href: "index.html" },
     porQue: "Com cerca de 100 mil trechos de nomes em ordem, umas 17 comparações bastam para chegar às sugestões.",
   },
   ligas: {
     nome: "Ligas mais visitadas", estrutura: "lista-auto", cena: "lista",
+    onde: { texto: "Abrir uma liga", href: "index.html" },
     porQue: "As ligas que você abre ganham pontos e sobem; assim as suas favoritas aparecem primeiro.",
   },
   destaques: {
     nome: "Destaques e páginas da liga", estrutura: "saltos", cena: "torres",
+    onde: { texto: "Abrir a Premier League", href: "liga.html?id=GB1" },
     porQue: "Os jogadores mais valiosos ganham torres mais altas: olhar a lista “de cima” mostra só os destaques, e os saltos levam direto a qualquer página.",
   },
   "ir-para": {
     nome: "Ir para um nome", estrutura: "saltos", cena: "torres",
+    onde: { texto: "Abrir a Premier League", href: "liga.html?id=GB1" },
     porQue: "A busca desce pelas vias expressas até o primeiro nome a partir do que foi digitado — e, ao digitar a próxima letra, continua de onde parou.",
   },
   "minha-lista": {
     nome: "Minha lista", estrutura: "saltos", cena: "torres",
+    onde: { texto: "Abrir a minha lista", href: "lista.html" },
     porQue: "Adicionar e remover jogadores insere e retira torres da lista, mantendo-a em ordem alfabética.",
   },
   "buscas-recentes": {
     nome: "Buscas recentes", estrutura: "lista-inicio", cena: "lista",
+    onde: { texto: "Buscar na página inicial", href: "index.html" },
     porQue: "O termo que você acabou de buscar passa a ser o primeiro; os mais antigos vão ficando para trás até sair.",
   },
   vistos: {
     nome: "Vistos por você", estrutura: "lista-transposicao", cena: "lista",
+    onde: { texto: "Abrir um jogador pela busca", href: "index.html" },
     porQue: "Cada nova visita adianta o jogador uma posição: quem você revisita sempre vai chegando à frente aos poucos.",
   },
   "em-alta": {
-    nome: "Em alta", estrutura: "afunilada", cena: "arvore",
-    porQue: "Mostra quem está no topo da árvore. Um jogador só é levado à raiz na 3ª visita, para um clique isolado não bagunçar a seção.",
+    nome: "Em alta", estrutura: "avl", cena: "arvore",
+    onde: { texto: "Ver na página inicial", href: "index.html" },
+    porQue: "Os jogadores ficam numa árvore ordenada pelo valor de mercado. O mais valioso é sempre o último à direita, e os seguintes são os vizinhos dele. A seção não muda com as suas visitas.",
+  },
+  perfil: {
+    nome: "Abrir um perfil", estrutura: "afunilada", cena: "arvore",
+    onde: { texto: "Abrir um jogador pela busca", href: "index.html" },
+    porQue: "Cada perfil é achado pelo nome nesta árvore. Quem você abre três vezes é levado à raiz e, daí em diante, é achado em menos passos.",
+  },
+  recomendados: {
+    nome: "Recomendados para você", estrutura: "avl-composta", cena: "arvore",
+    onde: { texto: "Ver na página inicial", href: "index.html" },
+    porQue: "Cada jogador entra na árvore uma vez por afinidade: clube, posição e liga, país e posição. Para cada perfil que você abriu, três buscas acham os grupos dele e pegam os mais valiosos de cada um. Quem combina em mais critérios aparece primeiro.",
   },
   valor: {
     nome: "Valor numa data e pico", estrutura: "avl", cena: "arvore",
+    onde: { texto: "Abrir o perfil de Erling Haaland", href: "jogador.html?id=418560" },
     porQue: "Cada avaliação do jogador é um nó, ordenado pela data. Cada nó guarda o maior valor abaixo dele, então o pico de um período sai sem olhar data por data.",
   },
   faixa: {
     nome: "Faixa de valor", estrutura: "avl", cena: "arvore",
+    onde: { texto: "Abrir a faixa de valor", href: "faixa.html" },
     porQue: "Os jogadores ficam ordenados pelo valor. Cada nó sabe quantos jogadores há abaixo dele, então contar uma faixa não exige visitá-la inteira.",
   },
   parecidos: {
     nome: "Parecidos", estrutura: "avl", cena: "arvore",
+    onde: { texto: "Abrir o perfil de Erling Haaland", href: "jogador.html?id=418560" },
     porQue: "Na árvore ordenada pelo valor, os jogadores de valor mais próximo são os vizinhos imediatos: basta andar para um lado e para o outro.",
   },
 };
@@ -140,7 +165,8 @@ function cenaLista(op) {
       case "permanece": quadro("Fica onde está: ninguém à frente tem menos pontos."); break;
       case "move_inicio": mover(id, 0); quadro("Vai direto para o início da lista."); break;
       case "transpoe": mover(id, p.para); quadro("Troca de lugar com o vizinho da frente."); break;
-      case "nao_encontrado": quadro("Chegou ao fim sem achar: é um termo novo."); break;
+      case "nao_encontrado": quadro("Chegou ao fim sem achar: é um item novo."); break;
+      case "esvazia": ordem = []; achado = null; quadro("Limpar tudo é imediato: a lista solta o primeiro elemento e, como cada um só é alcançado pelo anterior, todos se vão juntos."); break;
       case "remove": ordem = ordem.filter((x) => x !== id); quadro(`A lista está cheia: o último, ${titulo(id)}, sai.`); break;
       case "insere":
         achado = id;
@@ -172,6 +198,7 @@ function cenaLista(op) {
       svg.append(cursor);
       for (const [id, item] of itens) {
         const g = el("g", { class: "no-lista" });
+        g.append(el("title", {}, String(item.titulo ?? item.rotulo ?? id)));
         g.append(el("rect", { x: -30, y: -13, width: 60, height: 26, rx: 6 }));
         g.append(el("text", { y: 4, "text-anchor": "middle" }, curto(String(item.rotulo ?? id), 8)));
         grupos.set(id, g);
@@ -328,6 +355,7 @@ function cenaTorres(op) {
         const torre = extremo ? topo : nos.get(id).torre;
         for (let n = 0; n <= torre; n++) {
           const rect = el("rect", { class: `andar${extremo ? " extremo" : ""}`, x: x(c) - lado / 2, y: y(n) - lado / 2, width: lado, height: lado, rx: 2 });
+          rect.append(el("title", {}, extremo ? (id === "cabeca" ? "início da lista" : "fim da lista") : `${nomeDoNo(id)} — torre de ${torre + 1} ${torre ? "andares" : "andar"}`));
           celulas.push({ c, n, id, rect });
           svg.append(rect);
         }
@@ -423,13 +451,18 @@ function cenaArvore(op) {
     ate: "Primeira descida: quantos jogadores valem até o máximo da faixa?",
     de: "Segunda descida: quantos valem menos que o mínimo da faixa?",
     pagina: "Por fim, pega os jogadores da página pela posição deles, descendo pelos tamanhos dos ramos.",
+    maior: "Para achar o jogador mais valioso, basta descer sempre para a direita: é lá que ficam os maiores valores.",
+    clube: "Primeira busca: desce até o primeiro jogador do mesmo clube.",
+    liga: "Segunda busca, do mesmo jeito: desce até o primeiro jogador da mesma posição e da mesma liga.",
+    pais: "Terceira busca: desce até o primeiro jogador do mesmo país e da mesma posição.",
   };
   quadro("A árvore antes da operação. A busca sempre começa pela raiz, no topo.");
   passos.forEach((p, indice) => {
     switch (p.passo) {
       case "etapa":
         atual = estrutura.raiz; visitados.clear(); marcas.clear();
-        resumido = p.nome === "pagina"; // a seleção da página repete a ideia: um quadro basta
+        // Descidas que repetem a ideia da anterior ganham um quadro só.
+        resumido = ["pagina", "liga", "pais"].includes(p.nome);
         quadro(ETAPAS[p.nome] || "");
         break;
       case "compara": {
@@ -474,6 +507,10 @@ function cenaArvore(op) {
         ? `Anda para os vizinhos mais caros: ${p.quantidade} da mesma posição em ${p.visitados} passos.`
         : `Anda para os vizinhos mais baratos: ${p.quantidade} da mesma posição em ${p.visitados} passos.`); break;
       case "nao_encontrado": quadro("Não encontrado."); break;
+      case "maiores": quadro(`Do mais valioso, anda para os vizinhos à esquerda: os ${p.quantidade} mais valiosos saem já em ordem.`); break;
+      case "grupo": quadro(p.quantidade
+        ? `Os jogadores do grupo estão lado a lado, do mais valioso para o menos: pega ${p.quantidade === 1 ? "o primeiro" : `os ${p.quantidade} primeiros`} andando pelos vizinhos.`
+        : "Não há outros jogadores neste grupo."); break;
       case "encontrado": if (!depoisDoAcesso && !resumido) { alvo = p.no; atual = p.no; quadro(`Chegou: ${rotulo(p.no)}.`); } break;
       default: break;
     }
@@ -550,6 +587,9 @@ function cenaArvore(op) {
       for (let i = 0; i < dados.size; i++) { const linha = el("line", { class: "ramo" }); linhas.push(linha); camada.append(linha); }
       for (const [id, d] of dados) {
         const g = el("g", { class: `no-arvore${d.resumo ? " resumo" : ""}` });
+        g.append(el("title", {}, d.resumo ? "ramo não desenhado"
+          : d.data ? `${nomeDoNo(d.data)} — ${formatarValor(d.valor)}`
+            : `${d.nome ?? nomeDoNo(id)}${d.valor ? ` — ${formatarValor(d.valor)}` : ""}${d.grupo ? ` (${d.grupo})` : ""}`));
         if (d.resumo) g.append(el("path", { d: "M0 -9 L9 8 L-9 8 Z" }));
         else {
           g.append(el("circle", { r: 13 }));
@@ -645,6 +685,8 @@ const CENAS = { lista: cenaLista, torres: cenaTorres, arvore: cenaArvore, vetor:
 
 /**
  * Monta a animação de uma operação dentro de `container`.
+ * Controles: tocar/pausar, passo anterior e próximo, barra para arrastar
+ * pelos passos e as setas ← → do teclado.
  * Devolve uma função que interrompe a animação (para trocar de operação).
  */
 export function montarAnimacao(container, op) {
@@ -665,14 +707,16 @@ export function montarAnimacao(container, op) {
   container.innerHTML = `
     <div class="palco"><svg viewBox="0 0 ${L} ${cena.altura}" role="img" aria-label="Animação da operação"></svg></div>
     <p class="legenda" aria-live="polite"></p>
+    <input class="trilha" type="range" min="0" max="${Math.max(0, total - 1)}" value="0" aria-label="Passo da animação">
     <div class="controles">
-      <button class="botao icone-so" data-acao="inicio" aria-label="Voltar ao início">${icone("voltar")}</button>
-      <button class="botao icone-so" data-acao="tocar" aria-label="Tocar ou pausar"></button>
-      <button class="botao icone-so" data-acao="passo" aria-label="Próximo passo">${icone("avancar")}</button>
+      <button class="botao icone-so" data-acao="anterior" aria-label="Passo anterior" title="Passo anterior (←)">${icone("voltar")}</button>
+      <button class="botao icone-so" data-acao="tocar" aria-label="Tocar ou pausar" title="Tocar ou pausar (espaço)"></button>
+      <button class="botao icone-so" data-acao="passo" aria-label="Próximo passo" title="Próximo passo (→)">${icone("avancar")}</button>
       <span class="num" data-contagem></span>
     </div>`;
   const svg = container.querySelector("svg");
   const legenda = container.querySelector(".legenda");
+  const trilha = container.querySelector(".trilha");
   const contagem = container.querySelector("[data-contagem]");
   const botaoTocar = container.querySelector('[data-acao="tocar"]');
   cena.montar(svg);
@@ -685,7 +729,8 @@ export function montarAnimacao(container, op) {
     indice = limitar(i, 0, total - 1);
     cena.mostrar(indice, animar);
     legenda.textContent = cena.quadros[indice].legenda;
-    contagem.textContent = `${indice + 1} / ${total}`;
+    contagem.textContent = `passo ${indice + 1} de ${total}`;
+    trilha.value = indice;
     botaoTocar.innerHTML = icone(relogio ? "pausar" : indice >= total - 1 ? "repetir" : "tocar");
   };
   const parar = () => { clearInterval(relogio); relogio = null; };
@@ -698,13 +743,22 @@ export function montarAnimacao(container, op) {
     }, intervalo);
     mostrar(indice);
   };
+  const alternar = () => { if (relogio) { parar(); mostrar(indice); } else tocar(); };
 
-  container.querySelector('[data-acao="inicio"]').addEventListener("click", () => { parar(); mostrar(0, false); });
+  container.querySelector('[data-acao="anterior"]').addEventListener("click", () => { parar(); mostrar(indice - 1); });
   container.querySelector('[data-acao="passo"]').addEventListener("click", () => { parar(); mostrar(indice + 1); });
-  botaoTocar.addEventListener("click", () => { if (relogio) { parar(); mostrar(indice); } else tocar(); });
+  botaoTocar.addEventListener("click", alternar);
+  trilha.addEventListener("input", () => { parar(); mostrar(Number(trilha.value), false); });
+  const teclado = (e) => {
+    if (!container.isConnected || e.target.matches("input:not(.trilha), textarea")) return;
+    if (e.key === "ArrowRight") { parar(); mostrar(indice + 1); e.preventDefault(); }
+    else if (e.key === "ArrowLeft") { parar(); mostrar(indice - 1); e.preventDefault(); }
+    else if (e.key === " " && !e.target.matches("button")) { alternar(); e.preventDefault(); }
+  };
+  document.addEventListener("keydown", teclado);
 
   mostrar(0, false);
   if (reduzirMovimento()) mostrar(total - 1, false); // sem animação: mostra o resultado
   else if (total > 1) tocar();
-  return parar;
+  return () => { parar(); document.removeEventListener("keydown", teclado); };
 }

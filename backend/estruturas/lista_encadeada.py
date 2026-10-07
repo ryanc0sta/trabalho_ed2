@@ -94,6 +94,14 @@ class ListaEncadeada:
         r.registrar("insere", no=rotulo(chave), posicao=0)
         return True
 
+    def esvaziar(self, rastro=None):
+        """Remove todos os elementos de uma vez: basta a lista soltar o
+        primeiro nó — os demais só eram alcançáveis a partir dele. θ(1)."""
+        r = rastro or RASTRO_NULO
+        r.registrar("esvazia", quantidade=self.tamanho)
+        self.cabeca = None
+        self.tamanho = 0
+
     def remover_ultimo(self, rastro=None):
         """Remove o último elemento (o menos recente numa lista com
         movimentação para o início). Retorna a chave removida ou None."""

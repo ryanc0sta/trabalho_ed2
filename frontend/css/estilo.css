@@ -179,7 +179,7 @@ button, input { font: inherit; color: inherit; }
 /* ------------------------------------------------------------- estrutura */
 main { padding: var(--e5) 0 var(--e6); }
 .secao { margin-top: var(--e6); }
-.secao-titulo { display: flex; align-items: baseline; justify-content: space-between; gap: var(--e2); margin-bottom: var(--e3); padding-bottom: var(--e1); border-bottom: 1px solid var(--borda); }
+.secao-titulo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e1) var(--e2); margin-bottom: var(--e3); padding-bottom: var(--e1); border-bottom: 1px solid var(--borda); }
 .secao-titulo h2 { font-size: var(--t3); text-transform: uppercase; letter-spacing: 0.04em; }
 
 /* ---------------------------------------------------------- página inicial */
@@ -212,6 +212,7 @@ main { padding: var(--e5) 0 var(--e6); }
 .card .foto.sem-foto { font-size: var(--t2); }
 .card .nome { font-weight: 700; line-height: 1.25; }
 .card .sub { font-size: var(--t5); color: var(--tinta-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .sub.motivo { white-space: normal; }
 .card:hover .foto { filter: brightness(1.05) contrast(1.05); transform: translateY(-2px); }
 .card:hover .nome { text-decoration: underline; text-underline-offset: 3px; }
 .entrar { animation: entrar 200ms ease both; animation-delay: calc(var(--i, 0) * 24ms); }
@@ -299,6 +300,14 @@ main { padding: var(--e5) 0 var(--e6); }
   margin-bottom: var(--e1); padding: 0 var(--e1); font: 700 var(--t5) / 1.5 var(--texto);
   letter-spacing: 0.06em; text-transform: uppercase; color: var(--tinta-2); word-spacing: normal;
 }
+.lateral h2 { display: flex; align-items: center; gap: var(--e1); }
+.limpar {
+  margin: 4px var(--e1) 0; padding: 0; border: 0; background: none; cursor: pointer;
+  font: 400 var(--t5) / 1.5 var(--texto); letter-spacing: 0; text-transform: none;
+  color: var(--tinta-2); text-decoration: underline; text-decoration-color: var(--controle); text-underline-offset: 3px;
+  transition: color var(--rapida);
+}
+.limpar:hover { color: var(--tinta); }
 .lateral a.item {
   display: flex; align-items: center; gap: var(--e1); min-height: 40px; padding: 0 var(--e1);
   border-radius: var(--raio); transition: background-color var(--rapida);
@@ -352,6 +361,8 @@ main { padding: var(--e5) 0 var(--e6); }
 .palco { padding: var(--e1); border: 1px solid var(--borda); border-radius: var(--raio); background: var(--superficie); overflow: hidden; }
 .palco svg { display: block; width: 100%; height: auto; }
 .legenda { min-height: 48px; margin-top: var(--e2); }
+.trilha { width: 100%; height: 24px; margin: 0; accent-color: var(--acao); cursor: pointer; }
+.acao-feita { display: grid; gap: 4px; }
 .controles { display: flex; align-items: center; gap: var(--e1); }
 .controles .num { margin-left: auto; font-size: var(--t5); color: var(--tinta-2); }
 .resultado { font-weight: 700; }
@@ -386,6 +397,22 @@ main { padding: var(--e5) 0 var(--e6); }
 .selo-linha { margin-top: var(--e1); }
 .acoes-perfil { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
 .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--acao); }
+
+/* aviso "você acabou de usar…": aparece depois de uma ação e leva à animação */
+.aviso-uso {
+  position: fixed; right: var(--e3); bottom: var(--e3); z-index: 34;
+  display: flex; align-items: center; gap: var(--e2); max-width: min(456px, calc(100vw - 2 * var(--e2)));
+  padding: var(--e1) var(--e1) var(--e1) var(--e2);
+  background: var(--fundo); border: 1px solid var(--controle); border-radius: var(--raio);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  transform: translateY(calc(100% + var(--e4))); opacity: 0; pointer-events: none;
+  transition: transform var(--media), opacity var(--media);
+}
+.aviso-uso.visivel { transform: none; opacity: 1; pointer-events: auto; }
+.aviso-uso [data-icone] { display: flex; color: var(--tinta-2); }
+.aviso-uso .texto { display: grid; min-width: 0; line-height: 1.3; }
+.aviso-uso .texto > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aviso-uso .botao { flex: none; }
 
 /* desenhos do palco (SVG). O verde marca o ponto onde o algoritmo está. */
 .palco text { font-family: var(--mono); font-size: 10px; fill: var(--tinta-2); }
@@ -444,6 +471,7 @@ main { padding: var(--e5) 0 var(--e6); }
   .topo .container { flex-wrap: wrap; gap: var(--e1); height: auto; padding-top: var(--e1); padding-bottom: var(--e1); }
   .topo .busca { order: 3; flex-basis: 100%; max-width: none; }
   .topo [data-bastidores] span:not(.num) { display: none; }
+  .aviso-uso { left: var(--e2); right: var(--e2); bottom: var(--e2); max-width: none; }
   .perfil { grid-template-columns: 1fr; gap: var(--e3); }
   .perfil .retrato { width: 176px; }
   .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--e3) var(--e2); }

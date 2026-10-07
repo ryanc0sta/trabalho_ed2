@@ -3,11 +3,11 @@
 //   - clicar no gráfico = valor naquela data (busca de piso);
 //   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
 
-import { api, modoAtual } from "./api.js?v=4";
+import { api, modoAtual } from "./api.js?v=5";
 import {
   animarNumero, atualizarLateral, cardJogador, esc, fotoHTML, formatarData, formatarValor, icone, idade,
   iniciarPagina, mostrarErro, parametro, registrarOperacao, selo, traduzirPe, traduzirPosicao,
-} from "./comum.js?v=4";
+} from "./comum.js?v=5";
 
 iniciarPagina();
 
@@ -43,6 +43,7 @@ function renderizar() {
             <a class="link" href="clube.html?id=${dados.clube.id}">${esc(dados.clube.nome)}</a>` : ""}
           ${dados.liga ? `<span aria-hidden="true">·</span><a class="link" href="liga.html?id=${encodeURIComponent(dados.liga.id)}">${esc(dados.liga.nome)}</a>` : ""}
           ${j.ativo ? "" : `<span>· inativo desde ${j.ultima_temporada}</span>`}
+          ${selo("perfil")}
         </div>
         <div class="valor-atual"><span id="valor-atual">€0</span>
           <small>${ranking ? `${ranking.posicao}º mais valioso de ${ranking.total} na liga` : "valor de mercado"}</small>
@@ -123,6 +124,7 @@ async function alternarLista(botao) {
     const andares = resposta.rastro.passos.find((p) => ["nivel_por_valor", "sorteio"].includes(p.passo));
     registrarOperacao({
       ferramenta: "minha-lista",
+      acao: true,
       titulo: dados.na_lista ? `Remover ${nome} da lista` : `Adicionar ${nome} à lista`,
       rastro: resposta.rastro,
       resultado: dados.na_lista
@@ -230,6 +232,7 @@ async function consultarValor(data) {
     marcar(r?.data, r?.valor);
     registrarOperacao({
       ferramenta: "valor",
+      acao: true,
       titulo: `Valor de ${dados.jogador.nome} em ${formatarData(data)}`,
       rastro: resposta.rastro,
       cena: {
@@ -261,6 +264,7 @@ async function calcularPico(evento) {
     marcar(r?.data, r?.valor);
     registrarOperacao({
       ferramenta: "valor",
+      acao: true,
       titulo: `Pico de ${dados.jogador.nome} entre ${formatarData(de)} e ${formatarData(ate)}`,
       rastro: resposta.rastro,
       cena: { arvore: resposta.arvore },
@@ -287,16 +291,20 @@ async function iniciar() {
     renderizar();
     const passoAcesso = acesso.rastro.passos.find((p) => p.passo === "acesso");
     const rotacoes = acesso.rastro.passos.filter((p) => p.passo === "rotacao").length;
+    // Comparações da descida até achar o jogador (as do afunilamento, depois, não contam aqui).
+    const ateAchar = acesso.rastro.passos.findIndex((p) => ["acesso", "caso", "rotacao", "raiz", "encontrado"].includes(p.passo));
+    const descida = acesso.rastro.passos.slice(0, ateAchar < 0 ? undefined : ateAchar).filter((p) => p.passo === "compara").length;
     const operacaoDaVisita = {
-      ferramenta: "em-alta",
-      titulo: `Visita a ${dados.jogador.nome}`,
+      ferramenta: "perfil",
+      acao: true,
+      titulo: `Abrir o perfil de ${dados.jogador.nome}`,
       rastro: acesso.rastro,
       cena: { arvore: acesso.antes },
       resultado: rotacoes
-        ? `Com ${rotacoes} rotações, ${dados.jogador.nome} chegou à raiz e passa a aparecer em “Em alta”.`
+        ? `Achado em ${descida} comparações. Com ${rotacoes} rotações ele foi para a raiz: na próxima vez, basta 1 comparação.`
         : passoAcesso && passoAcesso.contador < passoAcesso.limite
-          ? `Visita ${passoAcesso.contador} de ${passoAcesso.limite}: a árvore não mudou. Na ${passoAcesso.limite}ª visita ele sobe para a raiz.`
-          : `${dados.jogador.nome} já estava na raiz: nada a mudar.`,
+          ? `Achado em ${descida} comparações. É a visita ${passoAcesso.contador} de ${passoAcesso.limite}: na ${passoAcesso.limite}ª ele sobe para a raiz.`
+          : `Achado em ${descida} ${descida === 1 ? "comparação" : "comparações"}: ele já está na raiz.`,
     };
     const itensVistos = (lista) => lista.map((j) => ({ id: j.id, rotulo: j.nome.split(" ").pop(), titulo: j.nome }));
     const trocou = acesso.vistos.rastro.passos.some((p) => p.passo === "transpoe");

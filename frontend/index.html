@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/estilo.css?v=4">
+  <link rel="stylesheet" href="css/estilo.css?v=5">
 </head>
 <body>
   <header id="topo"></header>
@@ -27,7 +27,13 @@
     </section>
 
     <section class="secao">
-      <div class="secao-titulo"><h2>Em alta</h2><span data-selo-de="em-alta"></span></div>
+      <div class="secao-titulo"><h2>Recomendados para você</h2><span data-selo-de="recomendados"></span></div>
+      <p class="meta" id="base-recomendados" style="margin:calc(-1 * var(--e2)) 0 var(--e2)"></p>
+      <div class="carrossel" id="recomendados"></div>
+    </section>
+
+    <section class="secao">
+      <div class="secao-titulo"><h2>Em alta</h2><span class="grupo-selo"><span class="meta">Os mais valiosos</span><span data-selo-de="em-alta"></span></span></div>
       <div class="carrossel" id="em-alta"></div>
     </section>
 
@@ -37,6 +43,6 @@
       <button class="ver-todas link" id="ver-todas">Ver todas as ligas</button>
     </section>
   </main>
-  <script type="module" src="js/inicio.js?v=4"></script>
+  <script type="module" src="js/inicio.js?v=5"></script>
 </body>
 </html>

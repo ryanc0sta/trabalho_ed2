@@ -2,11 +2,11 @@
 // percorre os níveis da lista com saltos (cada nível tem metade dos jogadores
 // do anterior — os mais valiosos, na versão modificada).
 
-import { api, modoAtual } from "./api.js?v=4";
+import { api, modoAtual } from "./api.js?v=5";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=4";
+} from "./comum.js?v=5";
 
 iniciarPagina();
 
@@ -92,6 +92,7 @@ async function irPara(texto) {
     const achado = await api.irPara(ligaId, texto, POR_PAGINA);
     registrarOperacao({
       ferramenta: "ir-para",
+      acao: true,
       titulo: `Ir para “${texto}” em ${detalhe.nome}`,
       rastro: achado.rastro,
       resultado: achado.posicao
@@ -127,11 +128,12 @@ function mudarNivel(novo) {
   pagina = 1;
   atualizarRotulo();
   clearTimeout(espera);
-  espera = setTimeout(carregarJogadores, 120); // o range dispara vários eventos ao arrastar
+  espera = setTimeout(() => carregarJogadores(true), 120); // o range dispara vários eventos ao arrastar
 }
 
 let pedido = 0;
-async function carregarJogadores() {
+/** `porUsuario`: veio de um gesto direto (filtro ou paginação), e não da abertura da página. */
+async function carregarJogadores(porUsuario = false) {
   const meu = ++pedido;
   [...elJogadores.children].forEach((c) => c.classList.add("sair"));
   try {
@@ -153,6 +155,7 @@ async function carregarJogadores() {
     const passosDaPagina = dados.rastro.passos.length;
     registrarOperacao({
       ferramenta: "destaques",
+      acao: porUsuario,
       titulo: dados.nivel === 0
         ? `${detalhe.nome}: todos os jogadores, página ${dados.pagina}`
         : `${detalhe.nome}: vista do nível ${dados.nivel}`,
@@ -179,7 +182,7 @@ function renderizarPaginacao(dados) {
     <button class="botao icone-so" data-ir="1" aria-label="Próxima página" ${dados.pagina >= dados.paginas ? "disabled" : ""}>${icone("proximo")}</button>`;
   elPaginacao.querySelectorAll("[data-ir]").forEach((b) => b.addEventListener("click", () => {
     pagina += Number(b.dataset.ir);
-    carregarJogadores();
+    carregarJogadores(true);
     elFiltro.scrollIntoView({ behavior: "smooth", block: "start" });
   }));
 }
@@ -198,6 +201,7 @@ async function iniciar() {
     const itens = (ligas) => ligas.map((l) => ({ id: l.id, rotulo: l.id, titulo: l.nome }));
     registrarOperacao({
       ferramenta: "ligas",
+      acao: true,
       titulo: `Visita a ${detalhe.nome}`,
       rastro: acesso.rastro,
       cena: { antes: itens(acesso.antes), depois: itens(acesso.depois) },

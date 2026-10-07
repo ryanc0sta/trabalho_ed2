@@ -2,10 +2,11 @@
 // "Em alta" = topo da árvore de busca; "Ligas" = lista autoorganizável (as
 // mais visitadas sobem); "Vistos por você" = lista com transposição.
 
-import { api, modoAtual } from "./api.js?v=4";
+import { api, modoAtual } from "./api.js?v=5";
 import {
-  cardJogador, esc, esqueletos, iniciarPagina, montarBusca, montarFrequentes, mostrarErro, parametro,
-} from "./comum.js?v=4";
+  cardJogador, esc, esqueletos, formatarValor, iniciarPagina, montarBusca, montarFrequentes, mostrarErro,
+  parametro, registrarOperacao,
+} from "./comum.js?v=5";
 
 iniciarPagina({ busca: false });
 const campoBusca = montarBusca(document.getElementById("busca-principal"), { grande: true });
@@ -99,15 +100,51 @@ function animarReordenacao(novaOrdem) {
 async function carregarEmAlta() {
   elAlta.innerHTML = esqueletos(6);
   try {
-    const { niveis } = await api.emAlta(3);
-    elAlta.innerHTML = niveis.flat().map((j, i) => cardJogador(j, i)).join("");
+    const dados = await api.emAlta(6);
+    elAlta.innerHTML = dados.jogadores.map((j, i) => cardJogador(j, i)).join("");
+    registrarOperacao({
+      ferramenta: "em-alta",
+      titulo: "Os jogadores mais valiosos",
+      rastro: dados.rastro,
+      cena: { arvore: dados.arvore },
+      resultado: `Os ${dados.jogadores.length} mais valiosos entre milhares de jogadores, com ${dados.rastro.comparacoes} comparações. O primeiro é ${dados.jogadores[0].nome}, com ${formatarValor(dados.jogadores[0].valor)}.`,
+    });
   } catch (erro) {
     mostrarErro(elAlta, erro);
   }
 }
 
+// Recomendações a partir dos perfis que o usuário abriu (a lista de vistos).
+const elRecomendados = document.getElementById("recomendados");
+const elBaseRecomendados = document.getElementById("base-recomendados");
+async function carregarRecomendados() {
+  elRecomendados.innerHTML = esqueletos(6);
+  try {
+    const dados = await api.recomendados();
+    if (!dados.fontes.length) {
+      elBaseRecomendados.textContent = "Abra o perfil de um jogador e as recomendações aparecem aqui.";
+      elRecomendados.innerHTML = "";
+      return;
+    }
+    const nomes = dados.fontes.map((f) => f.nome);
+    const lista = nomes.length > 1 ? `${nomes.slice(0, -1).join(", ")} e ${nomes[nomes.length - 1]}` : nomes[0];
+    elBaseRecomendados.textContent = `Porque você abriu ${lista}.`;
+    elRecomendados.innerHTML = dados.jogadores.map((j, i) => cardJogador(j, i, j.motivo)).join("");
+    registrarOperacao({
+      ferramenta: "recomendados",
+      titulo: `Recomendações a partir de ${nomes[0]}`,
+      rastro: dados.rastro,
+      cena: { arvore: dados.arvore },
+      resultado: `${dados.jogadores.length} recomendações com ${dados.rastro.comparacoes} comparações: três buscas por perfil aberto, sem percorrer a base.`,
+    });
+  } catch (erro) {
+    mostrarErro(elRecomendados, erro);
+  }
+}
+
 function carregarTudo() {
   carregarLigas();
+  carregarRecomendados();
   carregarEmAlta();
   montarFrequentes(document.getElementById("frequentes"), document.getElementById("secao-frequentes"));
 }

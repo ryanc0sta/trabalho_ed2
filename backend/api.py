@@ -23,8 +23,9 @@ from .dados.modelos import normalizar
 from .estruturas.avl import ArvoreAVL
 from .estruturas.ordenacao import merge_sort
 from .estruturas.rastro import Rastro, rotulo
-from .visualizacao import (dados_no_historico, dados_no_jogador, dados_no_valor, itens_ligas,
-                           nos_skip, recorte_arvore)
+from .dados.carregar import CRITERIOS_DE_AFINIDADE
+from .visualizacao import (dados_no_afinidade, dados_no_historico, dados_no_jogador, dados_no_valor,
+                           itens_ligas, nos_skip, recorte_arvore)
 
 RAIZ = Path(__file__).resolve().parent.parent
 log = logging.getLogger("uvicorn.error")
@@ -218,14 +219,49 @@ async def acessar_jogador(request: Request, jogador_id: int, modo: Modo = "modif
                        "rastro": rastro_vistos.para_json()}}
 
 
-@app.get("/api/em-alta", tags=["jogadores"], summary="Jogadores no topo da árvore de busca")
-async def em_alta(request: Request, niveis: int = Query(3, ge=1, le=6), modo: Modo = "modificado"):
+@app.get("/api/em-alta", tags=["jogadores"],
+         summary="Os jogadores mais valiosos (maior chave e predecessores na árvore por valor)")
+async def em_alta(request: Request, quantos: int = Query(6, ge=1, le=24)):
     base = obter_base(request)
-    arvore = base.busca if modo == "modificado" else base.busca_classica
+    rastro = Rastro()
+    jogadores = base.em_alta(quantos, rastro)
     return {
-        "modo": modo,
-        "niveis": [[j.resumo() for _, j in nivel] for nivel in arvore.primeiros_niveis(niveis)],
-        "arvore": recorte_arvore(arvore, profundidade=niveis, dados_no=dados_no_jogador),
+        "jogadores": [j.resumo() for j in jogadores],
+        "rastro": rastro.para_json(),
+        "arvore": recorte_arvore(base.por_valor, [(float("inf"), 0)], profundidade=2, dados_no=dados_no_valor),
+    }
+
+
+MOTIVOS = {
+    "clube": "Mesmo clube de {}",
+    "liga": "Mesma posição e liga de {}",
+    "pais": "Mesmo país e posição de {}",
+}
+
+
+@app.get("/api/recomendados", tags=["jogadores"],
+         summary="Recomendações a partir dos perfis abertos (árvore de afinidades)")
+async def recomendados(request: Request, jogador_id: int | None = None,
+                       limite: int = Query(8, ge=1, le=24)):
+    """Com `jogador_id`, recomenda a partir desse jogador; sem ele, a partir
+    dos três primeiros da lista de vistos."""
+    base = obter_base(request)
+    if jogador_id is not None:
+        fontes = [obter_jogador(base, jogador_id)]
+    else:
+        fontes = [j for _, j in base.frequentes][:3]
+    rastro = Rastro()
+    escolhidos = base.recomendar(fontes, limite=limite, rastro=rastro)
+    grupos = []
+    if fontes:
+        grupos = [(grupo_de(fontes[0]),) for _, _, grupo_de in CRITERIOS_DE_AFINIDADE if grupo_de(fontes[0])]
+    return {
+        "fontes": [{"id": j.id, "nome": j.nome} for j in fontes],
+        "jogadores": [j.resumo() | {"motivo": MOTIVOS[criterio].format(fonte.nome), "criterio": criterio}
+                      for j, criterio, fonte in escolhidos],
+        "rastro": rastro.para_json(),
+        "arvore": recorte_arvore(base.afinidades, grupos, profundidade=2, dados_no=dados_no_afinidade)
+        if fontes else None,
     }
 
 
@@ -372,6 +408,15 @@ async def registrar_busca(request: Request, q: str = Query(..., min_length=1, ma
     rastro = Rastro()
     antes = base.buscas.chaves()
     base.registrar_busca(q, rastro=rastro)
+    return {"antes": antes, "buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
+
+
+@app.delete("/api/buscas", tags=["ferramentas"], summary="Limpa as buscas recentes")
+async def limpar_buscas(request: Request):
+    base = obter_base(request)
+    rastro = Rastro()
+    antes = base.buscas.chaves()
+    base.limpar_buscas(rastro)
     return {"antes": antes, "buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
 
 
