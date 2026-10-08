@@ -53,6 +53,11 @@ function renderizarEscolhidos() {
 
 function desenhar() {
   grafico?.destroy();
+  // Sem internet a biblioteca do gráfico não carrega: a página continua funcionando sem ele.
+  if (typeof Chart === "undefined") {
+    document.getElementById("grafico").parentElement.innerHTML = `<p class="vazio">O gráfico precisa de internet para aparecer. As trocas de liderança continuam abaixo.</p>`;
+    return;
+  }
   const fonte = { family: "IBM Plex Mono", size: 12 };
   grafico = new Chart(document.getElementById("grafico"), {
     type: "line",

@@ -168,6 +168,11 @@ function cor(nome) {
 
 function desenharGrafico() {
   grafico?.destroy();
+  // Sem internet a biblioteca do gráfico não carrega: a página continua funcionando sem ele.
+  if (typeof Chart === "undefined") {
+    document.getElementById("grafico").parentElement.innerHTML = `<p class="vazio">O gráfico precisa de internet para aparecer. As consultas abaixo continuam funcionando.</p>`;
+    return;
+  }
   const pontos = dados.historico.map((h) => ({ x: paraTempo(h.data), y: h.valor, data: h.data }));
   grafico = new Chart(document.getElementById("grafico"), {
     type: "line",
