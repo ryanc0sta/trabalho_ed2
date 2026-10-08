@@ -6,7 +6,7 @@
 //
 // Cenas: lista (encadeada), torres (lista com saltos), árvore e vetor (busca binária).
 
-import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=6";
+import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=7";
 
 // ---------------------------------------------------------------- catálogo
 export const ESTRUTURAS = {
@@ -52,21 +52,31 @@ export const FERRAMENTAS = {
   },
   ligas: {
     nome: "Ligas mais visitadas", estrutura: "lista-auto", cena: "lista",
+    modificada: true,
+    mudou: "Na versão clássica, a liga aberta vai direto para o primeiro lugar. Aqui ela ganha pontos, que perdem força com o tempo, e só passa à frente de quem tem menos pontos: um clique isolado não derruba as suas ligas favoritas.",
     onde: { texto: "Abrir uma liga", href: "index.html" },
     porQue: "As ligas que você abre ganham pontos e sobem; assim as suas favoritas aparecem primeiro.",
   },
   destaques: {
     nome: "Destaques e páginas", estrutura: "saltos", cena: "torres",
+    modificada: true,
+    mudou: "Na versão clássica, a altura de cada torre é sorteada com uma moeda. Aqui a altura vem do valor de mercado, e por isso o nível de cima mostra os destaques. Além disso, cada ligação guarda quantos jogadores ela pula, o que leva direto a qualquer página.",
+    medido: "Medido na Premier League: a página 30 é alcançada em 16 passos; sem as contagens de salto, seria preciso percorrer 696 jogadores.",
     onde: { texto: "Abrir a Premier League", href: "liga.html?id=GB1" },
     porQue: "Os jogadores mais valiosos ganham torres mais altas: olhar a lista “de cima” mostra só os destaques, e os saltos levam direto a qualquer página.",
   },
   "ir-para": {
     nome: "Ir para um nome", estrutura: "saltos", cena: "torres",
+    modificada: true,
+    mudou: "Na versão clássica, toda busca recomeça do início da lista. Aqui a busca lembra onde a anterior parou e, se o novo alvo estiver perto, continua dali.",
+    medido: "Medido: 40% a 70% menos comparações quando a próxima busca cai perto da anterior.",
     onde: { texto: "Abrir a Premier League", href: "liga.html?id=GB1" },
     porQue: "A busca desce pelas vias expressas até o primeiro nome a partir do que foi digitado — e, ao digitar a próxima letra, continua de onde parou.",
   },
   "minha-lista": {
     nome: "Minha lista", estrutura: "saltos", cena: "torres",
+    modificada: true,
+    mudou: "Na versão clássica, a torre de quem entra na lista é sorteada com uma moeda. Aqui a altura vem do valor de mercado do jogador, e as contagens de salto são corrigidas a cada entrada e saída.",
     onde: { texto: "Abrir a minha lista", href: "lista.html" },
     porQue: "Adicionar e remover jogadores insere e retira torres da lista, mantendo-a em ordem alfabética.",
   },
@@ -87,6 +97,8 @@ export const FERRAMENTAS = {
   },
   perfil: {
     nome: "Abrir um perfil", estrutura: "afunilada", cena: "arvore",
+    modificada: true,
+    mudou: "Na versão clássica, toda visita leva o jogador à raiz. Aqui isso só acontece na terceira visita, para que um clique isolado não tire do topo quem é procurado sempre.",
     onde: { texto: "Abrir um jogador pela busca", href: "index.html" },
     porQue: "Cada perfil é achado pelo nome nesta árvore. Quem você abre três vezes é levado à raiz e, daí em diante, é achado em menos passos.",
   },
@@ -122,11 +134,16 @@ export const FERRAMENTAS = {
   },
   valor: {
     nome: "Valor numa data e pico", estrutura: "avl", cena: "arvore",
+    modificada: true,
+    mudou: "Na versão clássica, achar o pico de um período exige olhar data por data. Aqui cada nó guarda o maior valor do seu ramo, e ramos inteiros são aproveitados de uma vez. (A consulta do valor numa data usa a busca de piso clássica.)",
     onde: { texto: "Abrir o perfil de Erling Haaland", href: "jogador.html?id=418560" },
     porQue: "Cada avaliação do jogador é um nó, ordenado pela data. Cada nó guarda o maior valor abaixo dele, então o pico de um período sai sem olhar data por data.",
   },
   faixa: {
     nome: "Faixa de valor", estrutura: "avl", cena: "arvore",
+    modificada: true,
+    mudou: "Na versão clássica, contar os jogadores de uma faixa exige visitar todos eles. Aqui cada nó guarda quantos jogadores há no seu ramo, e a contagem sai de duas descidas.",
+    medido: "Medido na faixa de €10M a €20M: 39 comparações, em vez de 783.",
     onde: { texto: "Abrir a faixa de valor", href: "faixa.html" },
     porQue: "Os jogadores ficam ordenados pelo valor. Cada nó sabe quantos jogadores há abaixo dele, então contar uma faixa não exige visitá-la inteira.",
   },
@@ -139,12 +156,19 @@ export const FERRAMENTAS = {
 
 export const nomeDoTipo = (tipo) => (tipo === "linear" ? "Estrutura linear" : "Estrutura hierárquica");
 
+/** Etiqueta que diz se a ferramenta usa a estrutura clássica (como nos slides) ou uma versão modificada. */
+export function etiquetaDeVersao(ferramenta) {
+  const modificada = Boolean(FERRAMENTAS[ferramenta].modificada);
+  return `<span class="versao-estrutura${modificada ? " modificada" : ""}">${modificada ? "Modificada" : "Clássica"}</span>`;
+}
+
 /** Selo clicável que diz qual estrutura a ferramenta usa (abre os Bastidores nela). */
 export function selo(ferramenta, { soIcone = false } = {}) {
   const estrutura = ESTRUTURAS[FERRAMENTAS[ferramenta].estrutura];
-  const dica = `${estrutura.nome} — ver como funciona`;
+  const modificada = Boolean(FERRAMENTAS[ferramenta].modificada);
+  const dica = `${estrutura.nome}${modificada ? " (modificada)" : " (clássica)"} — ver como funciona`;
   return `<button class="selo${soIcone ? " so-icone" : ""}" type="button" data-selo="${ferramenta}" title="${esc(dica)}" aria-label="${esc(dica)}">
-    ${icone(estrutura.tipo)}${soIcone ? "" : `<span>${esc(estrutura.nome)}</span>`}</button>`;
+    ${icone(estrutura.tipo)}${soIcone ? "" : `<span>${esc(estrutura.nome)}</span>${modificada ? '<span class="mod">modificada</span>' : ""}`}</button>`;
 }
 
 // ------------------------------------------------------------- utilitários

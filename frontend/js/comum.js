@@ -1,13 +1,14 @@
 // Componentes compartilhados: topo, busca, cards, formatação e o painel
 // "Bastidores" — onde ficam os detalhes técnicos (passos de cada operação e a
-// escolha entre as versões modificada e clássica das estruturas).
+// indicação de quais estruturas foram modificadas em relação às dos slides).
 
-import { api, definirModo, modoAtual } from "./api.js?v=6";
-import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=6";
+import { api } from "./api.js?v=7";
+import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=7";
 
-import { ESTRUTURAS, FERRAMENTAS, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=6";
+import { ESTRUTURAS, FERRAMENTAS, etiquetaDeVersao, montarAnimacao, nomeDoTipo, selo } from "./estruturas.js?v=7";
 
 export { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo, selo };
+export { ESTRUTURAS, FERRAMENTAS, etiquetaDeVersao, nomeDoTipo };
 
 // -------------------------------------------------------------- formatação
 export function idade(nascimento) {
@@ -297,14 +298,7 @@ function montarBastidores() {
       <div class="corpo">
         <section id="explicacao"></section>
         <section class="mapa" id="acoes"></section>
-        <section class="mapa" id="mapa"></section>
-        <div class="versao">
-          <span class="meta">Versão das estruturas (para comparar)</span>
-          <div class="segmentado" role="group" aria-label="Versão das estruturas">
-            <button data-modo="modificado">Modificada</button>
-            <button data-modo="classico">Clássica</button>
-          </div>
-        </div>
+        <p><a class="link" href="estruturas.html">Ver todas as estruturas usadas no site</a></p>
       </div>
     </aside>`);
   const painel = document.getElementById("bastidores");
@@ -313,7 +307,7 @@ function montarBastidores() {
   painel.querySelector("[data-fechar]").addEventListener("click", fecharBastidores);
   veu.addEventListener("click", fecharBastidores);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharBastidores(); });
-  // Selos espalhados pelo site e linhas do mapa abrem a explicação da ferramenta.
+  // Selos espalhados pelo site (e botões com data-selo) abrem a explicação da ferramenta.
   document.addEventListener("click", (e) => {
     const alvo = e.target.closest("[data-selo]");
     if (alvo) {
@@ -326,15 +320,6 @@ function montarBastidores() {
     if (linha) mostrarFerramenta(linha.dataset.ferramenta);
   });
   montarAviso();
-
-  const botoesModo = painel.querySelectorAll("[data-modo]");
-  const marcarModo = () => botoesModo.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.modo === modoAtual())));
-  marcarModo();
-  botoesModo.forEach((b) => b.addEventListener("click", () => {
-    if (b.dataset.modo === modoAtual()) return;
-    definirModo(b.dataset.modo);
-    marcarModo();
-  }));
 }
 
 /** Abre o painel na ferramenta indicada (ou na da última operação feita). */
@@ -365,13 +350,16 @@ function mostrarFerramenta(id) {
   const passos = op?.rastro?.passos || [];
   const alvo = document.getElementById("explicacao");
   alvo.innerHTML = `
-    <p class="tipo">${icone(estrutura.tipo)}${nomeDoTipo(estrutura.tipo)}</p>
+    <p class="tipo">${icone(estrutura.tipo)}${nomeDoTipo(estrutura.tipo)}${etiquetaDeVersao(id)}</p>
     <h3 class="nome-estrutura">${esc(estrutura.nome)}</h3>
     <p>${esc(estrutura.oQue)}</p>
     <p class="porque"><b>${esc(ferramenta.nome)}.</b> ${esc(ferramenta.porQue)}</p>
+    ${ferramenta.modificada
+      ? `<p class="mudanca"><b>O que foi modificado.</b> ${esc(ferramenta.mudou)}${ferramenta.medido ? ` <span class="medido">${esc(ferramenta.medido)}</span>` : ""}</p>`
+      : `<p class="mudanca classica">Esta ferramenta usa a estrutura clássica, como nos slides da disciplina, sem alterações.</p>`}
     ${op ? `
       <div class="operacao">
-        <p class="acao-feita"><span class="meta">Sua ação${op.modo === "classico" ? " · versão clássica" : ""}</span><b>${esc(op.titulo)}</b></p>
+        <p class="acao-feita"><span class="meta">Sua ação</span><b>${esc(op.titulo)}</b></p>
         <div id="animacao"></div>
         ${op.resultado ? `<p class="resultado">${esc(op.resultado)}</p>` : ""}
         ${passos.length ? `
@@ -387,7 +375,6 @@ function mostrarFerramenta(id) {
       </div>`}`;
   if (op) pararAnimacao = montarAnimacao(document.getElementById("animacao"), op);
   renderizarAcoes();
-  renderizarMapa();
   document.querySelector("#bastidores .corpo").scrollTop = 0;
 }
 
@@ -406,19 +393,6 @@ function renderizarAcoes() {
       </button></li>`).join("")}</ul>`;
 }
 
-function renderizarMapa() {
-  const linha = ([id, f]) => `
-    <li><button type="button" data-ferramenta="${id}" ${id === ferramentaAtual ? 'aria-current="true"' : ""}>
-      <span>${esc(f.nome)}</span><span class="meta">${esc(ESTRUTURAS[f.estrutura].nome)}</span>
-    </button></li>`;
-  const doTipo = (tipo) => Object.entries(FERRAMENTAS).filter(([, f]) => ESTRUTURAS[f.estrutura].tipo === tipo);
-  document.getElementById("mapa").innerHTML = `
-    <h3>O que cada ferramenta usa</h3>
-    ${["linear", "hierarquica"].map((tipo) => `
-      <p class="tipo">${icone(tipo)}${tipo === "linear" ? "Estruturas lineares" : "Estruturas hierárquicas"}</p>
-      <ul>${doTipo(tipo).map(linha).join("")}</ul>`).join("")}`;
-}
-
 /**
  * Registra a última operação de uma ferramenta para os Bastidores.
  * { ferramenta, titulo, rastro: {passos, comparacoes}, cena?: dados do desenho,
@@ -428,7 +402,6 @@ function renderizarMapa() {
 export function registrarOperacao(operacao) {
   if (!FERRAMENTAS[operacao.ferramenta]) return;
   const { acao, ...op } = operacao;
-  op.modo = modoAtual();
   operacoes.porFerramenta[op.ferramenta] = op;
   operacoes.ultima = op.ferramenta;
   if (acao) {
@@ -514,6 +487,9 @@ const PAGINAS = [
   ] },
   { grupo: "Seu espaço", itens: [
     { href: "lista.html", icone: "marcador", texto: "Minha lista", contador: "minha_lista" },
+  ] },
+  { grupo: "Por dentro", itens: [
+    { href: "estruturas.html", icone: "hierarquica", texto: "Estruturas usadas" },
   ] },
 ];
 

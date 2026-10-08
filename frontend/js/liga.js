@@ -2,11 +2,11 @@
 // percorre os níveis da lista com saltos (cada nível tem metade dos jogadores
 // do anterior — os mais valiosos, na versão modificada).
 
-import { api, modoAtual } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   cardJogador, esc, esqueletos, formatarValor, fotoHTML, icone, idade, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 
@@ -22,7 +22,7 @@ let nivel = 0;
 let pagina = 1;
 let alvoId = null; // jogador a destacar depois de "Ir para um nome"
 
-const niveisDoModo = () => (modoAtual() === "modificado" ? detalhe.niveis : detalhe.niveis_classica);
+const niveisDoModo = () => detalhe.niveis; // níveis da lista com saltos (altura pelo valor de mercado)
 
 function nivelInicial() {
   // O nível mais alto que ainda enche a primeira página.
@@ -47,8 +47,7 @@ function renderizarCabecalho() {
 function rotuloDoNivel(k) {
   const info = niveisDoModo()[k];
   if (k === 0) return `Todos os ${info.jogadores} jogadores`;
-  if (modoAtual() === "modificado") return `Acima de ${formatarValor(info.valor_minimo)}`;
-  return `Amostra de ${info.jogadores} jogadores`;
+  return `Acima de ${formatarValor(info.valor_minimo)}`;
 }
 
 function renderizarFiltro() {
@@ -253,13 +252,5 @@ async function carregarRecordes() {
     alvo.innerHTML = "";
   }
 }
-
-window.addEventListener("modo", () => {
-  if (!detalhe) return;
-  nivel = nivelInicial();
-  pagina = 1;
-  renderizarFiltro();
-  carregarJogadores();
-});
 
 iniciar();

@@ -2,11 +2,11 @@
 // "Em alta" = topo da árvore de busca; "Ligas" = lista autoorganizável (as
 // mais visitadas sobem); "Vistos por você" = lista com transposição.
 
-import { api, modoAtual } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   cardJogador, esc, esqueletos, formatarValor, iniciarPagina, montarBusca, montarFrequentes, mostrarErro,
   parametro, registrarOperacao,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina({ busca: false });
 const campoBusca = montarBusca(document.getElementById("busca-principal"), { grande: true });
@@ -30,7 +30,7 @@ botaoTodas.addEventListener("click", () => {
 });
 
 // Ordem mostrada da última vez, para animar o que mudou desde então.
-const chaveOrdem = () => `ordem-ligas-${modoAtual()}`;
+const chaveOrdem = () => "ordem-ligas";
 function lerOrdemAnterior() {
   try {
     return JSON.parse(sessionStorage.getItem(chaveOrdem()) || "null");
@@ -149,7 +149,6 @@ function carregarTudo() {
   montarFrequentes(document.getElementById("frequentes"), document.getElementById("secao-frequentes"));
 }
 
-window.addEventListener("modo", carregarTudo);
 // Ao voltar pelo botão do navegador, a página pode vir do cache: recarrega.
 window.addEventListener("pageshow", (e) => { if (e.persisted) carregarTudo(); });
 carregarTudo();

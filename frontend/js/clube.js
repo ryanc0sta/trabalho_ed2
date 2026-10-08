@@ -2,11 +2,11 @@
 // numa data passada, cada jogador do elenco de hoje (uma busca de piso na
 // árvore de histórico de cada um).
 
-import { api } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   cardJogador, esc, formatarData, formatarValor, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 

@@ -1,21 +1,6 @@
 // Acesso à API do backend. Todas as funções devolvem o JSON da resposta.
-
-export function modoAtual() {
-  try {
-    return localStorage.getItem("modo") === "classico" ? "classico" : "modificado";
-  } catch {
-    return "modificado";
-  }
-}
-
-export function definirModo(modo) {
-  try {
-    localStorage.setItem("modo", modo);
-  } catch {
-    /* sem armazenamento: o modo vale só até recarregar */
-  }
-  window.dispatchEvent(new CustomEvent("modo", { detail: modo }));
-}
+// O site usa sempre as estruturas do trabalho (as modificadas, onde houver); o servidor
+// ainda aceita ?modo=classico nas rotas, usado nos testes e nas medições.
 
 async function pedir(caminho, { metodo = "GET", params = {} } = {}) {
   const url = new URL("/api" + caminho, location.origin);
@@ -36,42 +21,40 @@ async function pedir(caminho, { metodo = "GET", params = {} } = {}) {
   return resposta.json();
 }
 
-const comModo = (params = {}) => ({ ...params, modo: modoAtual() });
-
 export const api = {
-  ligas: () => pedir("/ligas", { params: comModo() }),
-  acessarLiga: (id) => pedir(`/ligas/${id}/acessar`, { metodo: "POST", params: comModo() }),
+  ligas: () => pedir("/ligas"),
+  acessarLiga: (id) => pedir(`/ligas/${id}/acessar`, { metodo: "POST" }),
   liga: (id) => pedir(`/ligas/${id}`),
   jogadoresDaLiga: (id, nivel, pagina, porPagina = 24) =>
-    pedir(`/ligas/${id}/jogadores`, { params: comModo({ nivel, pagina, por_pagina: porPagina }) }),
-  estrutura: (id, params) => pedir(`/ligas/${id}/estrutura`, { params: comModo(params) }),
-  localizar: (ligaId, jogadorId) => pedir(`/ligas/${ligaId}/localizar/${jogadorId}`, { params: comModo() }),
+    pedir(`/ligas/${id}/jogadores`, { params: { nivel, pagina, por_pagina: porPagina } }),
+  estrutura: (id, params) => pedir(`/ligas/${id}/estrutura`, { params }),
+  localizar: (ligaId, jogadorId) => pedir(`/ligas/${ligaId}/localizar/${jogadorId}`),
   busca: (q, limite = 8) => pedir("/busca", { params: { q, limite } }),
-  acessarJogador: (id) => pedir(`/jogadores/${id}/acessar`, { metodo: "POST", params: comModo() }),
+  acessarJogador: (id) => pedir(`/jogadores/${id}/acessar`, { metodo: "POST" }),
   emAlta: (quantos = 6) => pedir("/em-alta", { params: { quantos } }),
   frequentes: () => pedir("/frequentes"),
   jogador: (id) => pedir(`/jogadores/${id}`),
   valorEm: (id, data) => pedir(`/jogadores/${id}/valor`, { params: { data } }),
-  pico: (id, de, ate) => pedir(`/jogadores/${id}/pico`, { params: comModo({ de, ate }) }),
+  pico: (id, de, ate) => pedir(`/jogadores/${id}/pico`, { params: { de, ate } }),
   clube: (id) => pedir(`/clubes/${id}`),
   // ferramentas da barra lateral
   lateral: () => pedir("/lateral"),
-  minhaLista: () => pedir("/minha-lista", { params: comModo() }),
-  adicionarALista: (id) => pedir(`/minha-lista/${id}`, { metodo: "PUT", params: comModo() }),
-  removerDaLista: (id) => pedir(`/minha-lista/${id}`, { metodo: "DELETE", params: comModo() }),
+  minhaLista: () => pedir("/minha-lista"),
+  adicionarALista: (id) => pedir(`/minha-lista/${id}`, { metodo: "PUT" }),
+  removerDaLista: (id) => pedir(`/minha-lista/${id}`, { metodo: "DELETE" }),
   registrarBusca: (q) => pedir("/buscas", { metodo: "POST", params: { q } }),
   limparBuscas: () => pedir("/buscas", { metodo: "DELETE" }),
   recomendados: (jogadorId) => pedir("/recomendados", { params: { jogador_id: jogadorId } }),
   faixa: (minimo, maximo, pagina, porPagina = 24) =>
-    pedir("/faixa", { params: comModo({ minimo, maximo, pagina, por_pagina: porPagina }) }),
+    pedir("/faixa", { params: { minimo, maximo, pagina, por_pagina: porPagina } }),
   irPara: (ligaId, q, porPagina = 24) =>
-    pedir(`/ligas/${ligaId}/ir-para`, { params: comModo({ q, por_pagina: porPagina }) }),
+    pedir(`/ligas/${ligaId}/ir-para`, { params: { q, por_pagina: porPagina } }),
   parecidos: (id) => pedir(`/jogadores/${id}/parecidos`),
   // segunda leva
   posicoes: () => pedir("/posicoes"),
   acessarPosicao: (id) => pedir(`/posicoes/${encodeURIComponent(id)}/acessar`, { metodo: "POST" }),
   jogadoresDaPosicao: (id, nivel, pagina, porPagina = 24) =>
-    pedir(`/posicoes/${encodeURIComponent(id)}/jogadores`, { params: comModo({ nivel, pagina, por_pagina: porPagina }) }),
+    pedir(`/posicoes/${encodeURIComponent(id)}/jogadores`, { params: { nivel, pagina, por_pagina: porPagina } }),
   transferencias: (de, ate, limite = 30) => pedir("/transferencias", { params: { de, ate, limite } }),
   comparar: (ids) => pedir("/comparar", { params: { ids: ids.join(",") } }),
   extremos: (ligaId) => pedir(`/ligas/${ligaId}/extremos`),

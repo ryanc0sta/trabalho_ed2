@@ -4,19 +4,53 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 
 ## Como rodar
 
-1. Coloque os CSVs da base Transfermarkt (Kaggle) na pasta `dados/`.
-2. Crie o ambiente e instale as dependências:
+**Você precisa de:** Python 3.10 ou mais novo, git e conexão com a internet (as fotos, os escudos, as
+fontes e a biblioteca do gráfico vêm de servidores externos).
+
+1. **Baixe o código.**
+   ```bash
+   git clone https://github.com/ryanc0sta/trabalho_ed2.git
+   cd trabalho_ed2
+   ```
+
+2. **Baixe a base de dados.** Os CSVs não ficam no repositório (são grandes). Baixe a base
+   "Football Data from Transfermarkt" no Kaggle, crie a pasta `dados/` na raiz do projeto e coloque
+   nela estes 5 arquivos (cerca de 80 MB; os outros arquivos da base não são usados):
+
+   ```
+   dados/players.csv
+   dados/clubs.csv
+   dados/competitions.csv
+   dados/player_valuations.csv
+   dados/transfers.csv
+   ```
+
+3. **Crie o ambiente e instale as dependências.**
    ```bash
    python3 -m venv .venv
    .venv/bin/pip install -r requirements.txt
    ```
-3. Suba o servidor e abra http://localhost:8001:
+   No Windows: `python -m venv .venv` e depois `.venv\Scripts\pip install -r requirements.txt`.
+
+4. **Suba o servidor.**
    ```bash
-   .venv/bin/uvicorn backend.api:app --reload --port 8001
+   .venv/bin/uvicorn backend.api:app --port 8001
    ```
-   Na subida, o servidor carrega a base nas estruturas (~10 s) e mostra um resumo no terminal.
-4. Testes: `.venv/bin/pytest` (não precisam da base real)
-5. Só a carga, com resumo e tempos: `.venv/bin/python -m backend.dados.carregar`
+   No Windows: `.venv\Scripts\uvicorn backend.api:app --port 8001`.
+
+   Espere aparecer `Application startup complete` (cerca de 15 s: o servidor carrega a base nas
+   estruturas e mostra um resumo no terminal) e abra **http://localhost:8001**. Para parar, Ctrl+C.
+
+**Outros comandos**
+- Testes: `.venv/bin/pytest` (não precisam da base de dados; devem passar todos).
+- Só a carga, com resumo e tempos: `.venv/bin/python -m backend.dados.carregar`.
+- Para desenvolver, acrescente `--reload` ao comando do servidor: ele reinicia a cada mudança no código.
+
+**Problemas comuns**
+- *"Não foi possível carregar"* no site: a página foi aberta antes de `Application startup complete`,
+  ou os CSVs não estão em `dados/` (o terminal avisa "CSVs não encontrados").
+- *"address already in use"*: a porta está ocupada; troque `--port 8001` por outra, como `--port 8002`.
+- As visitas, a "Minha lista" e as buscas recentes ficam na memória do servidor: ao reiniciá-lo, voltam ao início.
 
 ## Telas (frontend)
 
@@ -25,7 +59,8 @@ Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algor
 | `index.html` | Ligas (lista autoorganizável), "Em alta" (topo da árvore afunilada), frequentes (transposição) |
 | `liga.html?id=GB1` | Slider de profundidade sobre os níveis da Skip List, cards paginados |
 | `jogador.html?id=418560` | Ficha, gráfico do histórico, valor numa data (piso) e pico no período (AVL aumentada), transferências |
-| `clube.html?id=281` | Ficha e elenco |
+| `clube.html?id=281` | Ficha, elenco e Máquina do tempo |
+| `estruturas.html` | Qual estrutura cada ferramenta usa, e quais foram modificadas |
 | `faixa.html` | Jogadores numa faixa de valor: contagem, extremos (piso e teto) e páginas |
 | `lista.html` | Minha lista: jogadores guardados, com inserção e remoção ao vivo |
 | `posicoes.html` | Por posição: lista de posições, cada uma com a sua Skip List (o Exemplo 1 do enunciado) |
@@ -69,8 +104,13 @@ dois lados; por isso a ferramenta usa a binária e mostra a contagem da interpol
   "Ver como", que abre a animação daquela ação.
 - A animação tem uma **barra para arrastar** pelos passos e aceita as setas ← → e a barra de espaço.
 - **"Suas últimas ações"** lista as ações recentes e a estrutura que cada uma usou.
-- No fim do painel, o mapa **"O que cada ferramenta usa"** lista todas as ferramentas, separadas em
-  estruturas lineares e hierárquicas, e o seletor de versão (modificada ou clássica) para comparar.
+- Cada estrutura traz a indicação **Clássica** (como nos slides da disciplina) ou **Modificada**. Nas
+  modificadas, o painel explica o que mudou em relação à versão clássica e, quando há, o ganho medido.
+  Os selos das ferramentas modificadas também dizem "modificada".
+- A página **Estruturas usadas** (`estruturas.html`, na barra lateral) lista todas as ferramentas,
+  separadas em estruturas lineares e hierárquicas, com a versão de cada uma e um botão "Como funciona".
+- O site usa sempre a versão do trabalho. As versões clássicas continuam no servidor (rotas com
+  `?modo=classico`), para os testes e para as medições que comparam as duas.
 
 | Animação (`frontend/js/estruturas.js`) | Usada por |
 |---|---|

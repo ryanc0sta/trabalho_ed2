@@ -2,11 +2,11 @@
 // Usa a árvore por valor: contagem pela diferença de posições (tamanho das
 // subárvores), página selecionada pela posição, e piso/teto para os extremos.
 
-import { api } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 
@@ -86,9 +86,7 @@ async function carregar() {
       titulo: `Jogadores ${faixa}`,
       rastro: dados.rastro,
       cena: { arvore: dados.arvore },
-      resultado: dados.modo === "classico"
-        ? `Contou ${dados.total} jogadores visitando um por um: ${dados.rastro.comparacoes} comparações.`
-        : `Contou ${dados.total} jogadores com ${dados.rastro.comparacoes} comparações, sem visitar a faixa inteira.`,
+      resultado: `Contou ${dados.total} jogadores com ${dados.rastro.comparacoes} comparações, sem visitar a faixa inteira.`,
     });
   } catch (erro) {
     mostrarErro(elJogadores, erro);
@@ -111,5 +109,4 @@ function renderizarPaginacao(dados) {
   }));
 }
 
-window.addEventListener("modo", carregar);
 carregar();

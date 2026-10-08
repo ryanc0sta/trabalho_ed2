@@ -2,11 +2,11 @@
 // início (as posições) em que cada item guarda uma lista com saltos (os
 // jogadores da posição), explorada do nível mais alto ao nível 0.
 
-import { api, modoAtual } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   cardJogador, esc, esqueletos, formatarValor, icone, iniciarPagina, mostrarErro, parametro,
   registrarOperacao, reordenarComAnimacao, selo, traduzirPosicao,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 
@@ -30,7 +30,7 @@ let detalhe = null; // posição escolhida, com os níveis da sua lista com salt
 let nivel = 0;
 let pagina = 1;
 
-const niveisDoModo = () => (modoAtual() === "modificado" ? detalhe.niveis : detalhe.niveis_classica);
+const niveisDoModo = () => detalhe.niveis; // níveis da lista com saltos (altura pelo valor de mercado)
 const nomeDaPosicao = (id) => traduzirPosicao(id);
 
 function renderizarPosicoes(posicoes) {
@@ -79,8 +79,7 @@ function nivelInicial() {
 function rotuloDoNivel(k) {
   const info = niveisDoModo()[k];
   if (k === 0) return `Todos os ${info.jogadores} jogadores`;
-  if (modoAtual() === "modificado") return `Acima de ${formatarValor(info.valor_minimo)}`;
-  return `Amostra de ${info.jogadores} jogadores`;
+  return `Acima de ${formatarValor(info.valor_minimo)}`;
 }
 
 function renderizarFiltro() {
@@ -167,13 +166,5 @@ async function iniciar() {
     mostrarErro(elJogadores, erro);
   }
 }
-
-window.addEventListener("modo", () => {
-  if (!detalhe) return;
-  nivel = nivelInicial();
-  pagina = 1;
-  renderizarFiltro();
-  carregarJogadores(false);
-});
 
 iniciar();

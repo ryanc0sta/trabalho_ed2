@@ -3,10 +3,10 @@
 // acham onde o período começa e termina. A busca por interpolação roda junto,
 // só para comparar o número de comparações.
 
-import { api } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   esc, formatarData, formatarValor, iniciarPagina, mostrarErro, parametro, registrarOperacao, selo,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 

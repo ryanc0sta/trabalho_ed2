@@ -126,16 +126,6 @@ button, input { font: inherit; color: inherit; }
 .link { text-decoration: underline; text-decoration-color: var(--controle); text-underline-offset: 3px; transition: text-decoration-color var(--rapida); }
 .link:hover { text-decoration-color: currentColor; }
 
-/* segmentado (dois estados) */
-.segmentado { display: inline-flex; padding: 2px; gap: 2px; border: 1px solid var(--controle); border-radius: var(--raio); }
-.segmentado button {
-  height: 32px; padding: 0 var(--e2); border: 0; border-radius: 6px; background: transparent;
-  color: var(--tinta-2); font-weight: 700; font-size: var(--t5); cursor: pointer;
-  transition: background-color var(--rapida), color var(--rapida);
-}
-.segmentado button:hover { color: var(--tinta); }
-.segmentado button[aria-pressed="true"] { background: var(--tinta); color: var(--fundo); }
-
 /* ------------------------------------------------------------------- topo */
 .topo { position: sticky; top: 0; z-index: 20; background: var(--fundo); border-bottom: 1px solid var(--borda); }
 .topo .container { display: flex; align-items: center; gap: var(--e2); height: 64px; }
@@ -397,7 +387,27 @@ main { padding: var(--e5) 0 var(--e6); }
 .mapa button:hover, .mapa button[aria-current] { background: var(--superficie); }
 .mapa button[aria-current] > span:first-child { font-weight: 700; }
 .mapa button .meta { text-align: right; }
-.bastidores .versao { display: grid; gap: var(--e1); justify-items: start; }
+
+/* indicação de versão: estrutura clássica (como nos slides) ou modificada */
+.versao-estrutura {
+  margin-left: auto; padding: 2px var(--e1); border: 1px solid var(--controle); border-radius: 999px;
+  font: 400 var(--t5) / 1.5 var(--texto); letter-spacing: 0; text-transform: none; color: var(--tinta-2); white-space: nowrap;
+}
+.versao-estrutura.modificada { background: var(--tinta); border-color: var(--tinta); color: var(--fundo); font-weight: 700; }
+.mudanca { padding-left: var(--e2); border-left: 2px solid var(--tinta); }
+.mudanca.classica { border-left-color: var(--borda); color: var(--tinta-2); }
+.medido { display: block; margin-top: 4px; font: 400 var(--t5) / 1.5 var(--mono); color: var(--tinta-2); }
+
+/* página "Estruturas usadas" */
+.secao-titulo h2 .icone { vertical-align: -3px; margin-right: 4px; }
+.mapa-lista { list-style: none; margin: 0; padding: 0; }
+.mapa-linha {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: start; gap: var(--e2);
+  padding: var(--e2) 0; border-bottom: 1px solid var(--borda);
+}
+.mapa-linha .nome { font-weight: 700; }
+.mapa-linha .versao-estrutura { margin-left: 0; }
+.mapa-linha .mudou { max-width: 72ch; margin-top: var(--e1); font-size: var(--t5); color: var(--tinta-2); }
 
 /* selo: diz qual estrutura a ferramenta usa e abre a explicação */
 .selo {
@@ -408,6 +418,8 @@ main { padding: var(--e5) 0 var(--e6); }
 }
 .selo:hover { border-color: var(--controle); color: var(--tinta); background: var(--superficie); }
 .selo .icone { width: 14px; height: 14px; }
+.selo .mod { font-weight: 700; color: var(--tinta); }
+.selo .mod::before { content: "· "; font-weight: 400; color: var(--tinta-2); }
 .selo.so-icone { width: 24px; padding: 0; justify-content: center; }
 .grupo-selo { display: inline-flex; align-items: center; gap: var(--e1); flex-wrap: wrap; justify-content: flex-end; }
 .selo-linha { margin-top: var(--e1); }
@@ -500,6 +512,8 @@ main { padding: var(--e5) 0 var(--e6); }
   .ligas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cabecalho .escudo-grande { width: 64px; height: 64px; }
   .so-largo { display: none; }
+  .mapa-linha { grid-template-columns: minmax(0, 1fr) auto; }
+  .mapa-linha .botao { grid-column: 1 / -1; justify-self: start; }
   /* tabela de transferências: cabe em 360px mesmo com nomes de clube longos */
   .transferencias { font-size: var(--t5); }
   .transferencias th, .transferencias td { padding-right: var(--e1); }

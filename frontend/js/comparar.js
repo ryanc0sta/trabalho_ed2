@@ -2,11 +2,11 @@
 // Cada histórico é uma árvore AVL; os percursos em ordem são intercalados numa
 // única linha do tempo, usada para achar as trocas de liderança.
 
-import { api } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   esc, formatarData, formatarValor, iniciarPagina, montarBusca, mostrarErro, parametro,
   registrarOperacao, selo,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 

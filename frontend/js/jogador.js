@@ -3,11 +3,11 @@
 //   - clicar no gráfico = valor naquela data (busca de piso);
 //   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
 
-import { api, modoAtual } from "./api.js?v=6";
+import { api } from "./api.js?v=7";
 import {
   animarNumero, atualizarLateral, cardJogador, esc, fotoHTML, formatarData, formatarValor, icone, idade,
   iniciarPagina, mostrarErro, parametro, registrarOperacao, selo, traduzirPe, traduzirPosicao,
-} from "./comum.js?v=6";
+} from "./comum.js?v=7";
 
 iniciarPagina();
 
