@@ -1,6 +1,4 @@
-// Componentes compartilhados: topo, busca, cards, formatação e o painel
-// "Bastidores" — onde ficam os detalhes técnicos (passos de cada operação e a
-// indicação de quais estruturas foram modificadas em relação às dos slides).
+
 
 import { api } from "./api.js?v=7";
 import { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo } from "./formato.js?v=7";
@@ -10,7 +8,6 @@ import { ESTRUTURAS, FERRAMENTAS, etiquetaDeVersao, montarAnimacao, nomeDoTipo, 
 export { descreverPasso, esc, formatarData, formatarValor, icone, nomeDoNo, selo };
 export { ESTRUTURAS, FERRAMENTAS, etiquetaDeVersao, nomeDoTipo };
 
-// -------------------------------------------------------------- formatação
 export function idade(nascimento) {
   if (!nascimento) return null;
   const hoje = new Date();
@@ -35,11 +32,9 @@ export function parametro(nome) {
   return new URLSearchParams(location.search).get(nome);
 }
 
-// ------------------------------------------------------------ fotos e cards
 const iniciais = (nome) =>
   String(nome || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
 
-/** <img> da foto; se faltar ou falhar, mostra as iniciais. */
 export function fotoHTML(url, nome, classe = "foto") {
   if (!url) return `<div class="${classe} sem-foto" aria-hidden="true">${esc(iniciais(nome))}</div>`;
   return `<img class="${classe}" src="${esc(url)}" alt="" loading="lazy" referrerpolicy="no-referrer"
@@ -55,7 +50,6 @@ document.addEventListener("error", (evento) => {
   img.replaceWith(div);
 }, true);
 
-/** Card de jogador. `legenda` troca a linha do clube (ex.: o motivo de uma recomendação). */
 export function cardJogador(j, i = 0, legenda = null) {
   return `
     <a class="card entrar" href="jogador.html?id=${j.id}" style="--i:${Math.min(i, 16)}">
@@ -68,10 +62,6 @@ export function cardJogador(j, i = 0, legenda = null) {
     </a>`;
 }
 
-/**
- * Reordena os filhos de `container` (identificados por data-id) para `novaOrdem`,
- * fazendo cada um deslizar do lugar antigo até o novo.
- */
 export function reordenarComAnimacao(container, novaOrdem) {
   const itens = [...container.children];
   const antes = new Map(itens.map((e) => [e.dataset.id, e.getBoundingClientRect()]));
@@ -97,7 +87,6 @@ export function mostrarErro(elemento, erro) {
   elemento.innerHTML = `<p class="aviso">Não foi possível carregar (${esc(erro.message)}). Verifique se o servidor está rodando.</p>`;
 }
 
-/** Conta de 0 até o valor, como um placar. */
 export function animarNumero(elemento, valorFinal, formatar = formatarValor, duracao = 700) {
   if (valorFinal === null || valorFinal === undefined || matchMedia("(prefers-reduced-motion: reduce)").matches) {
     elemento.textContent = formatar(valorFinal);
@@ -112,7 +101,6 @@ export function animarNumero(elemento, valorFinal, formatar = formatarValor, dur
   requestAnimationFrame(quadro);
 }
 
-// -------------------------------------------------------------------- tema
 function temaAtual() {
   const definido = document.documentElement.dataset.tema;
   if (definido) return definido;
@@ -125,7 +113,7 @@ function alternarTema(botao) {
   try {
     localStorage.setItem("tema", novo);
   } catch {
-    /* sem armazenamento: vale até recarregar */
+
   }
   atualizarBotaoTema(botao);
   window.dispatchEvent(new CustomEvent("tema", { detail: novo }));
@@ -138,7 +126,6 @@ function atualizarBotaoTema(botao) {
   botao.title = botao.getAttribute("aria-label");
 }
 
-// -------------------------------------------------------------------- topo
 function montarTopo({ busca = true } = {}) {
   const topo = document.getElementById("topo");
   topo.className = "topo";
@@ -160,8 +147,6 @@ function montarTopo({ busca = true } = {}) {
   if (busca) montarBusca(document.getElementById("busca-topo"));
 }
 
-/** Campo de busca com sugestões. `grande` = versão de destaque da página inicial. */
-/** `aoEscolher(jogador)`: em vez de abrir o perfil, entrega o jogador escolhido (ex.: Comparar). */
 export function montarBusca(caixa, { grande = false, aoEscolher = null, dica = "Nome ou sobrenome do jogador" } = {}) {
   caixa.classList.add("busca");
   caixa.classList.toggle("grande", grande);
@@ -195,7 +180,7 @@ export function montarBusca(caixa, { grande = false, aoEscolher = null, dica = "
     }
     try {
       const termo = entrada.value.trim();
-      const resposta = await api.registrarBusca(termo); // entra nas "buscas recentes"
+      const resposta = await api.registrarBusca(termo);
       const itens = (termos) => termos.map((t) => ({ id: t, rotulo: t, titulo: t }));
       registrarOperacao({
         ferramenta: "buscas-recentes",
@@ -205,7 +190,7 @@ export function montarBusca(caixa, { grande = false, aoEscolher = null, dica = "
         resultado: `“${resposta.buscas[0]}” agora é a primeira das buscas recentes.`,
       });
     } catch {
-      /* não impede a navegação */
+
     }
     location.href = `jogador.html?id=${jogador.id}`;
   };
@@ -260,11 +245,6 @@ export function montarBusca(caixa, { grande = false, aoEscolher = null, dica = "
   return entrada;
 }
 
-// -------------------------------------------------------------- bastidores
-// O painel explica UMA ferramenta por vez: qual estrutura ela usa, por quê, e
-// uma animação da última operação feita (a partir do rastro real do servidor).
-// A última operação de cada ferramenta fica na sessão, para continuar
-// disponível ao trocar de página.
 const CHAVE_OPERACOES = "bastidores";
 const operacoes = lerOperacoes();
 let ferramentaAtual = null;
@@ -283,7 +263,7 @@ function guardarOperacoes() {
   try {
     sessionStorage.setItem(CHAVE_OPERACOES, JSON.stringify(operacoes));
   } catch {
-    /* sem espaço ou sem armazenamento: as operações valem só nesta página */
+
   }
 }
 
@@ -307,7 +287,7 @@ function montarBastidores() {
   painel.querySelector("[data-fechar]").addEventListener("click", fecharBastidores);
   veu.addEventListener("click", fecharBastidores);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") fecharBastidores(); });
-  // Selos espalhados pelo site (e botões com data-selo) abrem a explicação da ferramenta.
+
   document.addEventListener("click", (e) => {
     const alvo = e.target.closest("[data-selo]");
     if (alvo) {
@@ -322,7 +302,6 @@ function montarBastidores() {
   montarAviso();
 }
 
-/** Abre o painel na ferramenta indicada (ou na da última operação feita). */
 export function abrirBastidores(ferramenta) {
   const painel = document.getElementById("bastidores");
   painel.classList.add("aberto");
@@ -378,7 +357,6 @@ function mostrarFerramenta(id) {
   document.querySelector("#bastidores .corpo").scrollTop = 0;
 }
 
-/** Histórico: as últimas ações do usuário e a estrutura que cada uma usou. */
 function renderizarAcoes() {
   const alvo = document.getElementById("acoes");
   if (!operacoes.historico.length) {
@@ -393,19 +371,13 @@ function renderizarAcoes() {
       </button></li>`).join("")}</ul>`;
 }
 
-/**
- * Registra a última operação de uma ferramenta para os Bastidores.
- * { ferramenta, titulo, rastro: {passos, comparacoes}, cena?: dados do desenho,
- *   resultado?: frase final, acao?: true se veio de uma ação direta do usuário }
- * Ações diretas entram no histórico e mostram o aviso "você acabou de usar…".
- */
 export function registrarOperacao(operacao) {
   if (!FERRAMENTAS[operacao.ferramenta]) return;
   const { acao, ...op } = operacao;
   operacoes.porFerramenta[op.ferramenta] = op;
   operacoes.ultima = op.ferramenta;
   if (acao) {
-    // Repetições seguidas da mesma ferramenta (digitar, arrastar) ocupam uma linha só.
+
     if (operacoes.historico[0]?.ferramenta === op.ferramenta) operacoes.historico.shift();
     operacoes.historico.unshift({ ferramenta: op.ferramenta, titulo: op.titulo });
     operacoes.historico.splice(8);
@@ -420,7 +392,6 @@ export function registrarOperacao(operacao) {
   if (acao) mostrarAviso(op);
 }
 
-// ------------------------------------------------- aviso "você acabou de usar"
 let relogioAviso = null;
 
 function montarAviso() {
@@ -463,8 +434,6 @@ function esconderAviso() {
   document.getElementById("aviso-uso")?.classList.remove("visivel");
 }
 
-// --------------------------------------------------------------- frequentes
-/** Preenche a fileira de jogadores vistos; esconde `secao` se estiver vazia. */
 export async function montarFrequentes(elemento, secao) {
   try {
     const { jogadores } = await api.frequentes();
@@ -476,7 +445,6 @@ export async function montarFrequentes(elemento, secao) {
   }
 }
 
-// ------------------------------------------------------------ barra lateral
 const PAGINAS = [
   { grupo: "Explorar", itens: [
     { href: "index.html", icone: "inicio", texto: "Início" },
@@ -520,7 +488,7 @@ function montarLateral() {
       });
       atualizarLateral();
     } catch {
-      /* a lista continua como estava */
+
     }
   });
   renderizarLateral({ minha_lista: 0, buscas: [], vistos: [] });
@@ -557,20 +525,18 @@ function renderizarLateral(dados) {
       </nav>` : ""}`;
 }
 
-/** Recarrega os contadores e as listas da barra lateral. */
 export async function atualizarLateral() {
   try {
     renderizarLateral(await api.lateral());
   } catch {
-    /* sem servidor: a barra fica só com os links */
+
   }
 }
 
-// ------------------------------------------------------------------ página
 export function iniciarPagina(opcoes) {
   montarTopo(opcoes);
   montarBastidores();
   montarLateral();
-  // Marcadores <span data-selo-de="ferramenta"> do HTML viram selos clicáveis.
+
   document.querySelectorAll("[data-selo-de]").forEach((marcador) => { marcador.outerHTML = selo(marcador.dataset.seloDe); });
 }

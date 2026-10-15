@@ -1,21 +1,3 @@
-"""Árvore Afunilada (Splay Tree) (slides: Busca Hierárquica, parte 3).
-
-Árvore binária de busca autoajustável: toda busca, inserção ou remoção afunila
-o nó acessado, isto é, leva-o à raiz por rotações. Nós acessados com
-frequência ficam perto da raiz; os inativos descem aos poucos.
-
-O afunilamento segue o algoritmo descendente recursivo visto em aula.
-Atenção: a recursão desce dois níveis por chamada, então a profundidade da
-pilha é metade da altura da árvore. Por isso a árvore inicial deve ser
-montada balanceada (`construir_de_ordenados`), e não por inserções em ordem,
-que formariam uma "lista" com a altura igual ao número de nós.
-
-Mesmo assim, no pior caso da Splay (acessar todas as chaves em ordem) ela
-vira uma cadeia, e o próximo afunilamento recursivo precisa de n/2 chamadas.
-O limite de recursão é ampliado para cobrir a base inteira (~50 mil nós);
-a partir do Python 3.12 isso não consome a pilha do C.
-"""
-
 import sys
 
 from .arvore_binaria import ArvoreBinariaBusca
@@ -23,12 +5,9 @@ from .rastro import RASTRO_NULO, rotulo
 
 sys.setrecursionlimit(max(sys.getrecursionlimit(), 100_000))
 
-
 class ArvoreAfunilada(ArvoreBinariaBusca):
-    # ----------------------------------------------------------- afunilamento
+
     def _afunilar(self, no, chave, rastro):
-        """AfunilamentoDescendenteRecursivo: retorna a subárvore com a chave
-        (ou o último nó visitado, se ela não existir) na raiz."""
         if no is None:
             return None
         if chave == no.chave:
@@ -44,13 +23,13 @@ class ArvoreAfunilada(ArvoreBinariaBusca):
                 rastro.registrar("compara", no=rotulo(filho.chave), decisao="esquerda")
                 filho.esq = self._afunilar(filho.esq, chave, rastro)
                 self._registrar_caso(rastro, "zig-zig" if filho.esq else "zig", filho.esq or filho)
-                no = self._rotacao_direita(no, rastro)  # primeiro zig
+                no = self._rotacao_direita(no, rastro)
             elif chave > filho.chave:
                 rastro.registrar("compara", no=rotulo(filho.chave), decisao="direita")
                 filho.dir = self._afunilar(filho.dir, chave, rastro)
                 if filho.dir is not None:
                     self._registrar_caso(rastro, "zag-zig", filho.dir)
-                    no.esq = self._rotacao_esquerda(filho, rastro)  # zag
+                    no.esq = self._rotacao_esquerda(filho, rastro)
                 else:
                     self._registrar_caso(rastro, "zig", filho)
             else:
@@ -67,14 +46,14 @@ class ArvoreAfunilada(ArvoreBinariaBusca):
             filho.esq = self._afunilar(filho.esq, chave, rastro)
             if filho.esq is not None:
                 self._registrar_caso(rastro, "zig-zag", filho.esq)
-                no.dir = self._rotacao_direita(filho, rastro)  # zig
+                no.dir = self._rotacao_direita(filho, rastro)
             else:
                 self._registrar_caso(rastro, "zag", filho)
         elif chave > filho.chave:
             rastro.registrar("compara", no=rotulo(filho.chave), decisao="direita")
             filho.dir = self._afunilar(filho.dir, chave, rastro)
             self._registrar_caso(rastro, "zag-zag" if filho.dir else "zag", filho.dir or filho)
-            no = self._rotacao_esquerda(no, rastro)  # primeiro zag
+            no = self._rotacao_esquerda(no, rastro)
         else:
             rastro.registrar("compara", no=rotulo(filho.chave), decisao="igual")
             self._registrar_caso(rastro, "zag", filho)
@@ -90,7 +69,6 @@ class ArvoreAfunilada(ArvoreBinariaBusca):
         if self.raiz is not None:
             r.registrar("raiz", no=rotulo(self.raiz.chave))
 
-    # ------------------------------------------------------------------ busca
     def buscar(self, chave, rastro=None):
         r = rastro or RASTRO_NULO
         self.afunilar(chave, r)
@@ -100,10 +78,7 @@ class ArvoreAfunilada(ArvoreBinariaBusca):
         r.registrar("nao_encontrado", chave=rotulo(chave))
         return None
 
-    # --------------------------------------------------------------- inserção
     def inserir(self, chave, valor, rastro=None):
-        """Afunila a chave; se ela não existir, o novo nó vira a raiz e a
-        antiga raiz (com uma de suas subárvores) fica como seu filho."""
         r = rastro or RASTRO_NULO
         novo = self._novo_no(chave, valor)
         if self.raiz is None:
@@ -127,10 +102,7 @@ class ArvoreAfunilada(ArvoreBinariaBusca):
         r.registrar("insere", no=rotulo(chave))
         return True
 
-    # ---------------------------------------------------------------- remoção
     def remover(self, chave, rastro=None):
-        """Afunila a chave até a raiz e a retira; a maior chave da subárvore
-        esquerda é afunilada e passa a ser a nova raiz."""
         r = rastro or RASTRO_NULO
         self.afunilar(chave, r)
         if self.raiz is None or self.raiz.chave != chave:
@@ -140,7 +112,7 @@ class ArvoreAfunilada(ArvoreBinariaBusca):
         if esquerda is None:
             self.raiz = direita
         else:
-            # Como a chave é maior que todas da esquerda, afunilá-la ali traz o máximo à raiz.
+
             nova_raiz = self._afunilar(esquerda, chave, r)
             nova_raiz.dir = direita
             self._atualizar(nova_raiz)

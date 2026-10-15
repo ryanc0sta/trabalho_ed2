@@ -1,6 +1,4 @@
-// Página "Estruturas usadas": qual estrutura cada ferramenta do site adota,
-// separadas em lineares e hierárquicas, com a indicação de quais foram
-// modificadas em relação à versão clássica (e o que mudou).
+
 
 import {
   ESTRUTURAS, FERRAMENTAS, esc, etiquetaDeVersao, icone, iniciarPagina,

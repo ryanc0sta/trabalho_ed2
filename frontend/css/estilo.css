@@ -1,29 +1,17 @@
-/* ================================================================ Scout Explorer
-   Direção visual: "ficha de scout" — editorial e técnica.
-   Títulos em Archivo condensada (manchete esportiva), números em IBM Plex Mono
-   (relatório de observação), fundo de papel/grafite com linhas finas. As fotos
-   são o único elemento colorido; a cor de destaque é usada SÓ em ações.
 
-   Escalas
-   - Tipografia: 48 / 32 / 20 / 16 / 13 px · pesos 400 e 700
-   - Espaço: 8 / 16 / 24 / 32 / 48 / 64 px
-   - Raio: 8 px (e círculo para avatares)
-   Contraste (WCAG AA) conferido: texto ≥ 6:1, ação ≥ 5,9:1, bordas de controle ≥ 3:1.
-*/
 
 :root {
-  /* paleta — tema claro */
-  --fundo: #f4f3ee;        /* papel */
-  --superficie: #eae8e1;   /* blocos e campos */
-  --borda: #d3d0c6;        /* linhas decorativas */
-  --controle: #8b887e;     /* borda de campos (3,2:1) */
-  --tinta: #17181a;        /* texto (16:1) */
-  --tinta-2: #57554f;      /* texto secundário (6,7:1) */
-  --acao: #0d6b3c;         /* única cor de destaque: ações (5,9:1) */
-  --sobre-acao: #ffffff;   /* texto sobre ação (6,6:1) */
+
+  --fundo: #f4f3ee;
+  --superficie: #eae8e1;
+  --borda: #d3d0c6;
+  --controle: #8b887e;
+  --tinta: #17181a;
+  --tinta-2: #57554f;
+  --acao: #0d6b3c;
+  --sobre-acao: #ffffff;
   --foco: color-mix(in srgb, var(--acao) 35%, transparent);
 
-  /* tipografia */
   --t1: 48px;
   --t2: 32px;
   --t3: 20px;
@@ -33,7 +21,6 @@
   --texto: "Archivo", system-ui, sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  /* espaço */
   --e1: 8px;
   --e2: 16px;
   --e3: 24px;
@@ -73,7 +60,6 @@
   color-scheme: dark;
 }
 
-/* ------------------------------------------------------------------ base */
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
 body {
@@ -99,13 +85,10 @@ button, input { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--acao); outline-offset: 2px; border-radius: var(--raio); }
 ::selection { background: var(--foco); }
 
-/* barras de rolagem discretas, nas cores do tema (fileiras horizontais e painel) */
 .carrossel, .bastidores .corpo { scrollbar-width: thin; scrollbar-color: var(--controle) transparent; }
 
-/* ------------------------------------------------------------------ ícones */
 .icone { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-/* ----------------------------------------------------------------- botões */
 .botao {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--e1);
   height: 40px; padding: 0 var(--e2); border-radius: var(--raio);
@@ -126,7 +109,6 @@ button, input { font: inherit; color: inherit; }
 .link { text-decoration: underline; text-decoration-color: var(--controle); text-underline-offset: 3px; transition: text-decoration-color var(--rapida); }
 .link:hover { text-decoration-color: currentColor; }
 
-/* ------------------------------------------------------------------- topo */
 .topo { position: sticky; top: 0; z-index: 20; background: var(--fundo); border-bottom: 1px solid var(--borda); }
 .topo .container { display: flex; align-items: center; gap: var(--e2); height: 64px; }
 .marca { flex: none; font-family: var(--titulo); font-stretch: 75%; font-weight: 700; font-size: var(--t3); letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; }
@@ -134,7 +116,6 @@ button, input { font: inherit; color: inherit; }
 .topo .acoes { display: flex; gap: var(--e1); margin-left: auto; }
 .topo .busca + .acoes { margin-left: 0; }
 
-/* ------------------------------------------------------------------ busca */
 .busca { position: relative; }
 .busca .campo { position: relative; }
 .busca .campo .icone { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--tinta-2); pointer-events: none; }
@@ -157,22 +138,17 @@ button, input { font: inherit; color: inherit; }
 .sugestao .num { margin-left: auto; }
 .sugestao.vazia { color: var(--tinta-2); cursor: default; }
 
-/* ----------------------------------------------------------------- avatar */
-/* max-width: none — com o max-width: 100% geral das imagens, o Firefox trata a foto como
-   largura mínima zero e encolhe o item que a contém */
 .avatar { width: 40px; height: 40px; max-width: none; border-radius: 50%; object-fit: cover; object-position: top; background: var(--superficie); flex: none; }
 .sem-foto {
   display: flex; align-items: center; justify-content: center; background: var(--superficie);
   color: var(--tinta-2); font-family: var(--titulo); font-stretch: 75%; font-weight: 700;
 }
 
-/* ------------------------------------------------------------- estrutura */
 main { padding: var(--e5) 0 var(--e6); }
 .secao { margin-top: var(--e6); }
 .secao-titulo { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--e1) var(--e2); margin-bottom: var(--e3); padding-bottom: var(--e1); border-bottom: 1px solid var(--borda); }
 .secao-titulo h2 { font-size: var(--t3); text-transform: uppercase; letter-spacing: 0.04em; }
 
-/* ---------------------------------------------------------- página inicial */
 .abertura { max-width: 720px; }
 .abertura h1 { font-size: var(--t1); }
 .abertura p { margin-top: var(--e2); font-size: var(--t3); color: var(--tinta-2); }
@@ -191,7 +167,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .ligas.recolhidas .liga-item:nth-child(n + 13) { display: none; }
 .ver-todas { margin-top: var(--e3); background: none; border: 0; padding: 0; cursor: pointer; font-weight: 700; }
 
-/* ------------------------------------------------------------------ cards */
 .grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--e4) var(--e3); }
 .card { display: flex; flex-direction: column; gap: var(--e1); }
 .card .foto {
@@ -213,8 +188,6 @@ main { padding: var(--e5) 0 var(--e6); }
 
 .esqueleto { background: var(--superficie); border-radius: var(--raio); animation: piscar 1.2s ease-in-out infinite; }
 
-/* jogadores vistos: fichas que quebram de linha — nada fica escondido ou cortado.
-   max-width + reticências no nome garantem que uma ficha nunca invade a vizinha. */
 .frequentes { display: flex; flex-wrap: wrap; gap: var(--e1); }
 .frequente {
   flex: none; max-width: 100%; display: flex; align-items: center; gap: var(--e1);
@@ -225,12 +198,10 @@ main { padding: var(--e5) 0 var(--e6); }
 .frequente .avatar { width: 32px; height: 32px; }
 .frequente .nome { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* --------------------------------------------------------------- cabeçalho */
 .cabecalho { display: flex; align-items: center; gap: var(--e3); }
 .cabecalho .escudo-grande { width: 80px; height: 80px; flex: none; object-fit: contain; padding: var(--e1); border-radius: var(--raio); background: #fff; border: 1px solid var(--borda); }
 .cabecalho .meta { margin-top: var(--e1); font-size: var(--t4); }
 
-/* --------------------------------------------------------- filtro da liga */
 .filtro { margin-top: var(--e5); display: grid; gap: var(--e2); }
 .filtro .linha { display: flex; justify-content: space-between; align-items: baseline; gap: var(--e2); flex-wrap: wrap; }
 .filtro .rotulo { font-size: var(--t3); font-weight: 700; }
@@ -239,7 +210,6 @@ main { padding: var(--e5) 0 var(--e6); }
 
 .paginacao { display: flex; justify-content: center; align-items: center; gap: var(--e2); margin-top: var(--e5); }
 
-/* ---------------------------------------------------------- página jogador */
 .perfil { display: grid; grid-template-columns: 240px 1fr; gap: var(--e5); align-items: start; }
 .perfil .retrato { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: top; border-radius: var(--raio); background: var(--superficie); }
 .perfil .retrato.sem-foto { font-size: var(--t1); }
@@ -270,13 +240,9 @@ main { padding: var(--e5) 0 var(--e6); }
 .transferencias td { padding: var(--e2) var(--e2) var(--e2) 0; border-top: 1px solid var(--borda); vertical-align: top; }
 .transferencias td.num { white-space: nowrap; }
 
-/* ------------------------------------------------------------ página clube */
 .ficha { margin-top: var(--e1); color: var(--tinta-2); }
 .ficha b { color: var(--tinta); }
 
-/* ----------------------------------------------------------- barra lateral
-   Em telas largas fica fixa à esquerda (o corpo ganha a margem); em telas
-   estreitas vira uma gaveta aberta pelo botão de menu do topo. */
 .lateral {
   position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; width: 240px;
   display: flex; flex-direction: column; gap: var(--e3); padding: 0 var(--e2) var(--e3);
@@ -320,7 +286,6 @@ main { padding: var(--e5) 0 var(--e6); }
   .so-estreito { display: none; }
 }
 
-/* extremos da liga (recordes), comparação e trocas de liderança */
 .recordes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--e2) var(--e4); margin-top: var(--e3); }
 .recorde { display: flex; align-items: center; gap: var(--e1); min-width: 0; }
 .recorde .nome { font-weight: 700; line-height: 1.2; }
@@ -336,7 +301,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .viradas { list-style: none; margin: 0; padding: 0; display: grid; }
 .viradas li { padding: var(--e1) 0; border-bottom: 1px solid var(--borda); }
 
-/* atalhos de faixa, campo "ir para" e itens da lista */
 .atalhos { display: flex; flex-wrap: wrap; gap: var(--e1); margin-top: var(--e2); }
 .ir-para { flex: 1 1 240px; max-width: 320px; }
 .card.alvo .foto { outline: 2px solid var(--tinta); outline-offset: 2px; }
@@ -345,9 +309,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .acoes-perfil { margin-top: var(--e3); }
 .introducao { margin-top: var(--e1); color: var(--tinta-2); }
 
-/* ------------------------------------------------------------ bastidores
-   Explica uma ferramenta por vez: a estrutura que ela usa e uma animação da
-   última operação. */
 .bastidores {
   position: fixed; top: 0; right: 0; bottom: 0; z-index: 40; width: min(560px, 100vw);
   background: var(--fundo); border-left: 1px solid var(--controle);
@@ -388,7 +349,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .mapa button[aria-current] > span:first-child { font-weight: 700; }
 .mapa button .meta { text-align: right; }
 
-/* indicação de versão: estrutura clássica (como nos slides) ou modificada */
 .versao-estrutura {
   margin-left: auto; padding: 2px var(--e1); border: 1px solid var(--controle); border-radius: 999px;
   font: 400 var(--t5) / 1.5 var(--texto); letter-spacing: 0; text-transform: none; color: var(--tinta-2); white-space: nowrap;
@@ -398,7 +358,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .mudanca.classica { border-left-color: var(--borda); color: var(--tinta-2); }
 .medido { display: block; margin-top: 4px; font: 400 var(--t5) / 1.5 var(--mono); color: var(--tinta-2); }
 
-/* página "Estruturas usadas" */
 .secao-titulo h2 .icone { vertical-align: -3px; margin-right: 4px; }
 .mapa-lista { list-style: none; margin: 0; padding: 0; }
 .mapa-linha {
@@ -409,7 +368,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .mapa-linha .versao-estrutura { margin-left: 0; }
 .mapa-linha .mudou { max-width: 72ch; margin-top: var(--e1); font-size: var(--t5); color: var(--tinta-2); }
 
-/* selo: diz qual estrutura a ferramenta usa e abre a explicação */
 .selo {
   display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 var(--e1); vertical-align: middle;
   border: 1px solid var(--borda); border-radius: 999px; background: none; color: var(--tinta-2);
@@ -426,7 +384,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .acoes-perfil { display: flex; align-items: center; gap: var(--e2); flex-wrap: wrap; }
 .ponto { width: 8px; height: 8px; border-radius: 50%; background: var(--acao); }
 
-/* aviso "você acabou de usar…": aparece depois de uma ação e leva à animação */
 .aviso-uso {
   position: fixed; right: var(--e3); bottom: var(--e3); z-index: 34;
   display: flex; align-items: center; gap: var(--e2); max-width: min(456px, calc(100vw - 2 * var(--e2)));
@@ -442,7 +399,6 @@ main { padding: var(--e5) 0 var(--e6); }
 .aviso-uso .texto > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .aviso-uso .botao { flex: none; }
 
-/* desenhos do palco (SVG). O verde marca o ponto onde o algoritmo está. */
 .palco text { font-family: var(--mono); font-size: 10px; fill: var(--tinta-2); }
 .no-lista { transition: transform 420ms ease, opacity 300ms ease; }
 .no-lista rect { fill: var(--fundo); stroke: var(--controle); transition: fill var(--media); }
@@ -484,11 +440,9 @@ main { padding: var(--e5) 0 var(--e6); }
 .veu { position: fixed; inset: 0; z-index: 35; background: rgba(0, 0, 0, 0.32); opacity: 0; pointer-events: none; transition: opacity var(--media); }
 .veu.visivel { opacity: 1; pointer-events: auto; }
 
-/* ------------------------------------------------------------------ avisos */
 .aviso { padding: var(--e2); border: 1px solid var(--controle); border-radius: var(--raio); }
 .vazio { color: var(--tinta-2); padding: var(--e3) 0; }
 
-/* --------------------------------------------------------------- animações */
 @keyframes entrar { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes sair { to { opacity: 0; } }
 @keyframes piscar { 50% { opacity: 0.55; } }
@@ -496,7 +450,6 @@ main { padding: var(--e5) 0 var(--e6); }
   *, *::before, *::after { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; }
 }
 
-/* -------------------------------------------------------------- responsivo */
 @media (max-width: 720px) {
   :root { --t1: 40px; --t2: 28px; }
   .container { padding-inline: var(--e2); }
@@ -514,9 +467,9 @@ main { padding: var(--e5) 0 var(--e6); }
   .so-largo { display: none; }
   .mapa-linha { grid-template-columns: minmax(0, 1fr) auto; }
   .mapa-linha .botao { grid-column: 1 / -1; justify-self: start; }
-  /* tabela de transferências: cabe em 360px mesmo com nomes de clube longos */
+
   .transferencias { font-size: var(--t5); }
   .transferencias th, .transferencias td { padding-right: var(--e1); }
   .transferencias td { overflow-wrap: anywhere; }
-  .frequente:nth-child(n + 7) { display: none; } /* no celular, só os 6 mais vistos */
+  .frequente:nth-child(n + 7) { display: none; }
 }

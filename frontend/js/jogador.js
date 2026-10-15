@@ -1,7 +1,4 @@
-// Página do jogador. Abrir a página conta como acesso na árvore de busca e
-// nos "vistos por você". O histórico vem de uma AVL aumentada:
-//   - clicar no gráfico = valor naquela data (busca de piso);
-//   - "Ver pico" = maior valor no período (máximo guardado nas subárvores).
+
 
 import { api } from "./api.js?v=7";
 import {
@@ -15,7 +12,7 @@ const jogadorId = parametro("id");
 const elJogador = document.getElementById("jogador");
 let dados = null;
 let grafico = null;
-let destaque = null; // {data, valor} marcado no gráfico
+let destaque = null;
 
 const paraTempo = (iso) => new Date(iso + "T00:00:00").getTime();
 const paraIso = (tempo) => new Date(tempo).toISOString().slice(0, 10);
@@ -112,7 +109,6 @@ function clubeLink(id, nome) {
   return id ? `<a class="link" href="clube.html?id=${id}">${esc(nome)}</a>` : esc(nome || "—");
 }
 
-// ------------------------------------------------------------ minha lista
 function atualizarBotaoLista(botao) {
   botao.setAttribute("aria-pressed", String(dados.na_lista));
   botao.innerHTML = dados.na_lista ? `${icone("certo")}Na sua lista` : `${icone("marcador")}Adicionar à lista`;
@@ -142,7 +138,6 @@ async function alternarLista(botao) {
   }
 }
 
-// --------------------------------------------------------------- parecidos
 async function carregarParecidos() {
   try {
     const resposta = await api.parecidos(jogadorId);
@@ -157,18 +152,17 @@ async function carregarParecidos() {
       resultado: `${resposta.jogadores.length} jogadores da mesma posição com valor próximo, achados andando pelos vizinhos na árvore.`,
     });
   } catch {
-    /* a seção apenas não aparece */
+
   }
 }
 
-// ------------------------------------------------------------------ gráfico
 function cor(nome) {
   return getComputedStyle(document.documentElement).getPropertyValue(nome).trim();
 }
 
 function desenharGrafico() {
   grafico?.destroy();
-  // Sem internet a biblioteca do gráfico não carrega: a página continua funcionando sem ele.
+
   if (typeof Chart === "undefined") {
     document.getElementById("grafico").parentElement.innerHTML = `<p class="vazio">O gráfico precisa de internet para aparecer. As consultas abaixo continuam funcionando.</p>`;
     return;
@@ -228,7 +222,6 @@ function marcar(data, valor) {
   grafico.update();
 }
 
-// ------------------------------------------------------------- consultas
 async function consultarValor(data) {
   const leitura = document.getElementById("leitura");
   try {
@@ -285,7 +278,6 @@ async function calcularPico(evento) {
   }
 }
 
-// ------------------------------------------------------------------ início
 async function iniciar() {
   if (!jogadorId) {
     elJogador.innerHTML = `<p class="aviso">Jogador não informado.</p>`;
@@ -293,13 +285,13 @@ async function iniciar() {
   }
   elJogador.innerHTML = `<div class="esqueleto" style="height:300px"></div>`;
   try {
-    // Abrir a página = acessar o jogador na árvore de busca (e nos vistos).
+
     const [acesso, detalhe] = await Promise.all([api.acessarJogador(jogadorId), api.jogador(jogadorId)]);
     dados = detalhe;
     renderizar();
     const passoAcesso = acesso.rastro.passos.find((p) => p.passo === "acesso");
     const rotacoes = acesso.rastro.passos.filter((p) => p.passo === "rotacao").length;
-    // Comparações da descida até achar o jogador (as do afunilamento, depois, não contam aqui).
+
     const ateAchar = acesso.rastro.passos.findIndex((p) => ["acesso", "caso", "rotacao", "raiz", "encontrado"].includes(p.passo));
     const descida = acesso.rastro.passos.slice(0, ateAchar < 0 ? undefined : ateAchar).filter((p) => p.passo === "compara").length;
     const operacaoDaVisita = {
@@ -327,7 +319,7 @@ async function iniciar() {
           ? `${dados.jogador.nome} já é o primeiro dos vistos.`
           : `${dados.jogador.nome} entrou no fim da lista de vistos.`,
     });
-    registrarOperacao(operacaoDaVisita); // por último: é a que o painel abre primeiro
+    registrarOperacao(operacaoDaVisita);
   } catch (erro) {
     mostrarErro(elJogador, erro);
   }

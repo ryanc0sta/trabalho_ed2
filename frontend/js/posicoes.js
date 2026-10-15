@@ -1,6 +1,4 @@
-// Por posição — o Exemplo 1 do enunciado: uma lista com movimentação para o
-// início (as posições) em que cada item guarda uma lista com saltos (os
-// jogadores da posição), explorada do nível mais alto ao nível 0.
+
 
 import { api } from "./api.js?v=7";
 import {
@@ -26,11 +24,11 @@ const elFiltro = document.getElementById("filtro");
 const elJogadores = document.getElementById("jogadores");
 const elPaginacao = document.getElementById("paginacao");
 
-let detalhe = null; // posição escolhida, com os níveis da sua lista com saltos
+let detalhe = null;
 let nivel = 0;
 let pagina = 1;
 
-const niveisDoModo = () => detalhe.niveis; // níveis da lista com saltos (altura pelo valor de mercado)
+const niveisDoModo = () => detalhe.niveis;
 const nomeDaPosicao = (id) => traduzirPosicao(id);
 
 function renderizarPosicoes(posicoes) {
@@ -160,7 +158,7 @@ async function iniciar() {
     const { posicoes } = await api.posicoes();
     renderizarPosicoes(posicoes);
     const pedida = parametro("id");
-    // Sem posição no endereço, abre a primeira da lista (acessá-la não muda a ordem).
+
     escolher(posicoes.some((p) => p.id === pedida) ? pedida : posicoes[0].id, false);
   } catch (erro) {
     mostrarErro(elJogadores, erro);

@@ -1,17 +1,4 @@
-"""Árvore binária ordinária de busca (slides: Busca Hierárquica, parte 1).
-
-Contém o que é comum às árvores usadas no projeto (AVL e Afunilada): busca,
-rotações, busca de piso/teto, percursos e construção balanceada a partir de
-uma lista ordenada. As subclasses redefinem inserção/remoção e o gancho
-`_atualizar`, chamado sempre que os filhos de um nó mudam (a AVL o usa para
-recalcular a altura).
-
-As operações são iterativas para não depender da altura da árvore (uma árvore
-ordinária pode degenerar numa lista).
-"""
-
 from .rastro import RASTRO_NULO, rotulo
-
 
 class NoArvore:
     __slots__ = ("chave", "valor", "esq", "dir")
@@ -22,22 +9,18 @@ class NoArvore:
         self.esq = None
         self.dir = None
 
-
 class ArvoreBinariaBusca:
     def __init__(self):
         self.raiz = None
         self.tamanho = 0
 
-    # ---------------------------------------------------------------- ganchos
     def _novo_no(self, chave, valor):
         return NoArvore(chave, valor)
 
     def _atualizar(self, no):
-        """Chamado após mudar os filhos de `no`. Árvore ordinária: nada a fazer."""
+        pass
 
-    # --------------------------------------------------------------- rotações
     def _rotacao_direita(self, no, rastro):
-        """O filho esquerdo (pivô) sobe e ocupa o lugar de `no`."""
         pivo = no.esq
         no.esq = pivo.dir
         pivo.dir = no
@@ -47,7 +30,6 @@ class ArvoreBinariaBusca:
         return pivo
 
     def _rotacao_esquerda(self, no, rastro):
-        """O filho direito (pivô) sobe e ocupa o lugar de `no`."""
         pivo = no.dir
         no.dir = pivo.esq
         pivo.esq = no
@@ -56,7 +38,6 @@ class ArvoreBinariaBusca:
         rastro.registrar("rotacao", direcao="esquerda", no=rotulo(no.chave), pivo=rotulo(pivo.chave))
         return pivo
 
-    # ------------------------------------------------------------------ busca
     def _localizar(self, chave, rastro):
         no = self.raiz
         while no is not None:
@@ -81,7 +62,6 @@ class ArvoreBinariaBusca:
         return no.valor
 
     def piso(self, chave, rastro=None):
-        """Maior par (chave, valor) com chave <= chave, ou None."""
         r = rastro or RASTRO_NULO
         no, melhor = self.raiz, None
         while no is not None:
@@ -98,7 +78,6 @@ class ArvoreBinariaBusca:
         return (melhor.chave, melhor.valor) if melhor else None
 
     def teto(self, chave, rastro=None):
-        """Menor par (chave, valor) com chave >= chave, ou None."""
         r = rastro or RASTRO_NULO
         no, melhor = self.raiz, None
         while no is not None:
@@ -114,7 +93,6 @@ class ArvoreBinariaBusca:
                 no = no.dir
         return (melhor.chave, melhor.valor) if melhor else None
 
-    # --------------------------------------------------------------- inserção
     def inserir(self, chave, valor, rastro=None):
         r = rastro or RASTRO_NULO
         pai, no = None, self.raiz
@@ -140,7 +118,6 @@ class ArvoreBinariaBusca:
         r.registrar("insere", no=rotulo(chave), pai=rotulo(pai.chave) if pai else None)
         return True
 
-    # ---------------------------------------------------------------- remoção
     def remover(self, chave, rastro=None):
         r = rastro or RASTRO_NULO
         pai, no = None, self.raiz
@@ -152,8 +129,7 @@ class ArvoreBinariaBusca:
             return False
 
         if no.esq is not None and no.dir is not None:
-            # Caso 3: dois filhos — copia o sucessor (menor da subárvore
-            # direita) para o nó e passa a remover o sucessor.
+
             pai_suc, suc = no, no.dir
             while suc.esq is not None:
                 pai_suc, suc = suc, suc.esq
@@ -161,7 +137,6 @@ class ArvoreBinariaBusca:
             no.chave, no.valor = suc.chave, suc.valor
             pai, no = pai_suc, suc
 
-        # Casos 1 e 2: nenhum ou um filho — o filho (ou None) ocupa o lugar.
         filho = no.esq if no.esq is not None else no.dir
         if pai is None:
             self.raiz = filho
@@ -173,11 +148,7 @@ class ArvoreBinariaBusca:
         r.registrar("remove", no=rotulo(chave))
         return True
 
-    # ------------------------------------------------------------- construção
     def construir_de_ordenados(self, pares):
-        """Monta uma árvore balanceada a partir de pares (chave, valor) já
-        ordenados e sem repetição: o elemento do meio vira a raiz, e cada
-        metade, recursivamente, uma subárvore. θ(n) e altura ⌈log₂(n+1)⌉."""
 
         def montar(inicio, fim):
             if inicio > fim:
@@ -192,9 +163,7 @@ class ArvoreBinariaBusca:
         self.raiz = montar(0, len(pares) - 1)
         self.tamanho = len(pares)
 
-    # --------------------------------------------------------------- consulta
     def em_ordem(self):
-        """Percurso em ordem infixa (chaves crescentes), com pilha explícita."""
         pilha, no = [], self.raiz
         while pilha or no is not None:
             while no is not None:
@@ -205,12 +174,9 @@ class ArvoreBinariaBusca:
             no = no.dir
 
     def iterar_a_partir_de(self, chave, rastro=None):
-        """Gera os pares em ordem crescente começando pelo teto de `chave`
-        (a menor chave >= chave) e seguindo de sucessor em sucessor.
-        Não altera a árvore."""
         r = rastro or RASTRO_NULO
         pilha, no = [], self.raiz
-        # Empilha o caminho até o teto, guardando só os nós com chave >= chave.
+
         while no is not None:
             if no.chave >= chave:
                 r.registrar("compara", no=rotulo(no.chave), decisao="esquerda")
@@ -228,8 +194,6 @@ class ArvoreBinariaBusca:
                 no = no.esq
 
     def iterar_antes_de(self, chave, rastro=None):
-        """Gera os pares em ordem DEcrescente começando pela maior chave
-        estritamente menor que `chave` e seguindo de predecessor em predecessor."""
         r = rastro or RASTRO_NULO
         pilha, no = [], self.raiz
         while no is not None:
@@ -249,8 +213,6 @@ class ArvoreBinariaBusca:
                 no = no.dir
 
     def a_partir_de(self, chave, limite):
-        """Até `limite` pares em ordem, começando pelo teto de `chave` —
-        base do autocompletar. Não altera a árvore."""
         resultado = []
         for par in self.iterar_a_partir_de(chave):
             if len(resultado) >= limite:
@@ -259,7 +221,6 @@ class ArvoreBinariaBusca:
         return resultado
 
     def primeiros_niveis(self, k):
-        """Nós dos k primeiros níveis (raiz = nível 0), em largura."""
         niveis, atual = [], [self.raiz] if self.raiz else []
         while atual and len(niveis) < k:
             niveis.append([(no.chave, no.valor) for no in atual])
@@ -273,7 +234,6 @@ class ArvoreBinariaBusca:
         return niveis
 
     def altura(self):
-        """Número de níveis (árvore vazia = 0), percorrendo em largura."""
         altura, atual = 0, [self.raiz] if self.raiz else []
         while atual:
             altura += 1

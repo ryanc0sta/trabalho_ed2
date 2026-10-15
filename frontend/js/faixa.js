@@ -1,6 +1,4 @@
-// Faixa de valor. Ação principal: "Ver jogadores".
-// Usa a árvore por valor: contagem pela diferença de posições (tamanho das
-// subárvores), página selecionada pela posição, e piso/teto para os extremos.
+
 
 import { api } from "./api.js?v=7";
 import {

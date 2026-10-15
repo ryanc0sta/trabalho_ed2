@@ -1,7 +1,4 @@
-// Janela de transferências. Ação principal: "Ver transferências".
-// As transferências ficam numa lista ordenada pela data; duas buscas binárias
-// acham onde o período começa e termina. A busca por interpolação roda junto,
-// só para comparar o número de comparações.
+
 
 import { api } from "./api.js?v=7";
 import {

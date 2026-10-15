@@ -2,25 +2,22 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.api import app
-from tests.test_carga import base  # noqa: F401  (fixture com a base pequena)
-
+from tests.test_carga import base
 
 @pytest.fixture(scope="module")
-def cliente(base):  # noqa: F811
+def cliente(base):
     app.state.base = base
     with TestClient(app) as c:
         yield c
     app.state.base = None
 
-
 def test_saude_e_frontend(cliente):
     assert cliente.get("/api/saude").json() == {"status": "ok", "dados_carregados": True}
     resposta = cliente.get("/")
     assert resposta.status_code == 200 and "Scout Explorer" in resposta.text
-    # O navegador deve sempre revalidar os arquivos do frontend (evita CSS/JS antigos).
+
     assert resposta.headers["cache-control"] == "no-cache"
     assert cliente.get("/css/estilo.css").headers["cache-control"] == "no-cache"
-
 
 def test_ligas_e_acesso(cliente):
     ligas = cliente.get("/api/ligas").json()["ligas"]
@@ -34,10 +31,9 @@ def test_ligas_e_acesso(cliente):
     assert "pontua" in passos and "avanca" in passos
 
     classica = cliente.post("/api/ligas/GB1/acessar?modo=classico").json()
-    assert classica["rastro"]["passos"][-1]["passo"] == "encontrado"  # GB1 já é a primeira
+    assert classica["rastro"]["passos"][-1]["passo"] == "encontrado"
     assert cliente.post("/api/ligas/XX9/acessar").status_code == 404
     assert cliente.get("/api/ligas?modo=errado").status_code == 422
-
 
 def test_liga_niveis_e_jogadores(cliente):
     liga = cliente.get("/api/ligas/IT1").json()
@@ -55,7 +51,6 @@ def test_liga_niveis_e_jogadores(cliente):
     assert topo["valor_minimo"] == 70_000_000
     assert cliente.get("/api/ligas/IT1/jogadores?nivel=99").json()["nivel"] == topo["nivel_maximo"]
 
-
 def test_estrutura_e_localizar(cliente):
     estrutura = cliente.get("/api/ligas/GB1/estrutura").json()
     assert estrutura["total"] == 3 and len(estrutura["nos"]) == 3
@@ -65,10 +60,9 @@ def test_estrutura_e_localizar(cliente):
     assert [n["nome"] for n in de_cima["nos"]] == ["Erling Haaland"]
 
     achado = cliente.get("/api/ligas/GB1/localizar/2").json()
-    assert achado["encontrado"] and achado["posicao"] == 1  # "bukayo saka" é o 1º em ordem alfabética
+    assert achado["encontrado"] and achado["posicao"] == 1
     assert achado["rastro"]["passos"][0]["passo"] == "inicio"
-    assert not cliente.get("/api/ligas/GB1/localizar/5").json()["encontrado"]  # está na IT1
-
+    assert not cliente.get("/api/ligas/GB1/localizar/5").json()["encontrado"]
 
 def test_busca(cliente):
     resposta = cliente.get("/api/busca?q=haal").json()
@@ -76,31 +70,28 @@ def test_busca(cliente):
     assert resposta["rastro"]["comparacoes"] > 0
     assert cliente.get("/api/busca?q=").status_code == 422
 
-
 def test_acessar_jogador_splay_condicional_e_frequentes(cliente):
     for vez in (1, 2):
         resposta = cliente.post("/api/jogadores/5/acessar").json()
         passos = [p["passo"] for p in resposta["rastro"]["passos"]]
-        assert "rotacao" not in passos  # condicional: ainda não afunilou
+        assert "rotacao" not in passos
     resposta = cliente.post("/api/jogadores/5/acessar").json()
-    assert resposta["depois"]["id"] == resposta["alvo"] == "nicolo barella|5"  # 3º acesso: raiz
+    assert resposta["depois"]["id"] == resposta["alvo"] == "nicolo barella|5"
     assert resposta["antes"]["id"] != resposta["alvo"]
 
     classica = cliente.post("/api/jogadores/2/acessar?modo=classico").json()
-    assert classica["depois"]["id"] == "bukayo saka|2"  # clássica: afunila na hora
+    assert classica["depois"]["id"] == "bukayo saka|2"
 
     frequentes = cliente.get("/api/frequentes").json()["jogadores"]
     assert [j["id"] for j in frequentes] == [5, 2]
     cliente.post("/api/jogadores/2/acessar")
     assert [j["id"] for j in cliente.get("/api/frequentes").json()["jogadores"]] == [2, 5]
 
-
 def test_em_alta(cliente):
     resposta = cliente.get("/api/em-alta?quantos=2").json()
     assert [j["nome"] for j in resposta["jogadores"]] == ["Erling Haaland", "Bukayo Saka"]
     assert resposta["rastro"]["passos"][0] == {"passo": "etapa", "nome": "maior"}
     assert "tam" in resposta["arvore"]
-
 
 def test_recomendados(cliente):
     de_um = cliente.get("/api/recomendados?jogador_id=2").json()
@@ -111,13 +102,12 @@ def test_recomendados(cliente):
         ("Bukayo Saka", "Mesmo país e posição de Bukayo Saka"),
     ]
     assert de_um["arvore"]["grupo"] and any(p["passo"] == "grupo" for p in de_um["rastro"]["passos"])
-    # Sem jogador: usa os perfis já abertos (a lista de vistos).
+
     vistos = [j["id"] for j in cliente.get("/api/frequentes").json()["jogadores"]]
     geral = cliente.get("/api/recomendados").json()
     assert [f["id"] for f in geral["fontes"]] == vistos[:3]
     assert not {j["id"] for j in geral["jogadores"]} & {f["id"] for f in geral["fontes"]}
     assert cliente.get("/api/recomendados?jogador_id=999999").status_code == 404
-
 
 def test_limpar_buscas(cliente):
     cliente.post("/api/buscas?q=um")
@@ -126,10 +116,9 @@ def test_limpar_buscas(cliente):
     assert "dois" in resposta["antes"] and resposta["buscas"] == []
     assert resposta["rastro"]["passos"][0]["passo"] == "esvazia"
     assert cliente.get("/api/lateral").json()["buscas"] == []
-    cliente.post("/api/buscas?q=de novo")  # a lista continua funcionando depois de limpa
+    cliente.post("/api/buscas?q=de novo")
     assert cliente.get("/api/lateral").json()["buscas"] == ["de novo"]
-    cliente.delete("/api/buscas")  # não deixa termos para os outros testes
-
+    cliente.delete("/api/buscas")
 
 def test_jogador_historico_valor_e_pico(cliente):
     jogador = cliente.get("/api/jogadores/1").json()
@@ -152,17 +141,16 @@ def test_jogador_historico_valor_e_pico(cliente):
         assert pico["resultado"] == {"data": "2021-10-07", "valor": 150_000_000}
     assert cliente.get("/api/jogadores/999999").status_code == 404
 
-
 def test_minha_lista_insere_e_remove(cliente):
     assert cliente.get("/api/minha-lista").json()["total"] == 0
     resposta = cliente.put("/api/minha-lista/1").json()
     assert resposta["adicionado"] and resposta["total"] == 1
     passos = [p["passo"] for p in resposta["rastro"]["passos"]]
     assert "nivel_por_valor" in passos and "liga" in passos
-    assert not cliente.put("/api/minha-lista/1").json()["adicionado"]  # já estava
+    assert not cliente.put("/api/minha-lista/1").json()["adicionado"]
     cliente.put("/api/minha-lista/5?modo=classico")
     lista = cliente.get("/api/minha-lista").json()
-    assert [j["nome"] for j in lista["jogadores"]] == ["Erling Haaland", "Nicolò Barella"]  # ordem alfabética
+    assert [j["nome"] for j in lista["jogadores"]] == ["Erling Haaland", "Nicolò Barella"]
     assert lista["valor_total"] == 270_000_000
     assert cliente.get("/api/minha-lista?modo=classico").json()["total"] == 2
     assert cliente.get("/api/jogadores/1").json()["na_lista"] is True
@@ -175,15 +163,13 @@ def test_minha_lista_insere_e_remove(cliente):
     assert cliente.get("/api/jogadores/1").json()["na_lista"] is False
     cliente.delete("/api/minha-lista/5")
 
-
 def test_buscas_recentes_movem_para_o_inicio(cliente):
     for termo in ("haal", "Saka", "barella"):
         cliente.post(f"/api/buscas?q={termo}")
     assert cliente.get("/api/lateral").json()["buscas"] == ["barella", "saka", "haal"]
-    resposta = cliente.post("/api/buscas?q=HAAL").json()  # repetido: vai para o início
+    resposta = cliente.post("/api/buscas?q=HAAL").json()
     assert resposta["buscas"] == ["haal", "barella", "saka"]
     assert resposta["rastro"]["passos"][-1]["passo"] == "move_inicio"
-
 
 def test_faixa_de_valor(cliente):
     for modo in ("modificado", "classico"):
@@ -197,44 +183,40 @@ def test_faixa_de_valor(cliente):
     vazia = cliente.get("/api/faixa?minimo=1&maximo=2").json()
     assert vazia["total"] == 0 and vazia["jogadores"] == [] and vazia["mais_caro"] is None
 
-
 def test_ir_para_um_nome_na_liga(cliente):
     for modo in ("modificado", "classico"):
         achado = cliente.get(f"/api/ligas/IT1/ir-para?q=Nic&modo={modo}").json()
         assert achado["jogador"]["nome"] == "Nicolò Barella" and achado["posicao"] == 3 and achado["pagina"] == 1
     assert cliente.get("/api/ligas/IT1/ir-para?q=zzz").json()["posicao"] is None
-    # Digitar o nome aos poucos: a segunda busca parte do "dedo" da primeira.
+
     cliente.get("/api/ligas/IT1/ir-para?q=j")
     passos = cliente.get("/api/ligas/IT1/ir-para?q=jo").json()["rastro"]["passos"]
     assert any(p["passo"] == "dedo" for p in passos)
 
-
 def test_parecidos(cliente):
-    parecidos = cliente.get("/api/jogadores/2/parecidos").json()  # Saka (GB1), €130M, ataque
+    parecidos = cliente.get("/api/jogadores/2/parecidos").json()
     assert [j["nome"] for j in parecidos["jogadores"]] == [
         "Erling Haaland", "Nicolò Barella", "Markus Haaland", "Juan Colombiano"]
     assert any(p["passo"] == "vizinhos" for p in parecidos["rastro"]["passos"])
-    assert cliente.get("/api/jogadores/4/parecidos").json()["jogadores"] == []  # inativo
-
+    assert cliente.get("/api/jogadores/4/parecidos").json()["jogadores"] == []
 
 def test_respostas_trazem_o_que_as_animacoes_desenham(cliente):
-    # Lista de vistos: a visita devolve o antes, o depois e os passos da transposição.
+
     cliente.post("/api/jogadores/3/acessar")
     visita = cliente.post("/api/jogadores/3/acessar").json()["vistos"]
     assert {"id", "nome"} <= set(visita["depois"][0]) and len(visita["antes"]) == len(visita["depois"])
     assert any(p["passo"] in ("transpoe", "encontrado") for p in visita["rastro"]["passos"])
-    # Skip List: cada comparação informa a altura da torre do nó.
+
     passos = cliente.get("/api/ligas/GB1/ir-para?q=m").json()["rastro"]["passos"]
     assert all("torre" in p for p in passos if p["passo"] == "compara" and p["no"] != "sentinela")
-    # Árvore por valor: recorte com o tamanho de cada ramo, e etapas da contagem.
+
     faixa = cliente.get("/api/faixa?minimo=100000&maximo=130000000").json()
     assert faixa["arvore"]["tam"] == 6 and "valor" in faixa["arvore"]
     assert [p["nome"] for p in faixa["rastro"]["passos"] if p["passo"] == "etapa"] == ["ate", "de", "pagina"]
     assert "arvore" in cliente.get("/api/jogadores/2/parecidos").json()
-    # Buscas recentes: a lista de antes acompanha a de depois.
+
     resposta = cliente.post("/api/buscas?q=novo termo").json()
     assert "novo termo" not in resposta["antes"] and resposta["buscas"][0] == "novo termo"
-
 
 def test_posicoes(cliente):
     assert [p["id"] for p in cliente.get("/api/posicoes").json()["posicoes"]] == ["Centre-Forward"]
@@ -247,28 +229,25 @@ def test_posicoes(cliente):
     assert topo["jogadores"][0]["nome"] == "Erling Haaland"
     assert cliente.post("/api/posicoes/Goleiro/acessar").status_code == 404
 
-
 def test_janela_de_transferencias(cliente):
     janela = cliente.get("/api/transferencias?de=2019-01-01&ate=2022-12-31").json()
     assert janela["total"] == 4 and janela["na_base"] == 4
-    assert [t["jogador"] for t in janela["transferencias"]][:2] == ["Erling Haaland", "Nicolò Barella"]  # €60M, €32,5M
+    assert [t["jogador"] for t in janela["transferencias"]][:2] == ["Erling Haaland", "Nicolò Barella"]
     assert janela["transferencias"][0]["para_clube"] == "Man City"
     assert janela["comparacoes_binaria"] > 0 and janela["comparacoes_interpolacao"] > 0
     assert all("restam" in p for p in janela["rastro"]["passos"])
     assert cliente.get("/api/transferencias?de=2022-01-01&ate=2021-01-01").status_code == 422
     assert cliente.get("/api/transferencias?de=2022-13-45&ate=2023-01-01").status_code == 422
 
-
 def test_comparar(cliente):
     resposta = cliente.get("/api/comparar?ids=1,2").json()
     assert [j["nome"] for j in resposta["jogadores"]] == ["Erling Haaland", "Bukayo Saka"]
     assert [len(serie) for serie in resposta["series"]] == [4, 1]
     assert [ponto["data"] for ponto in resposta["linha"]] == sorted(ponto["data"] for ponto in resposta["linha"])
-    # Saka (€20M em 2020) passa Haaland (€45M)? Não: ninguém troca de líder nesta linha do tempo.
-    assert resposta["viradas"] == []
-    assert cliente.get("/api/comparar?ids=1,2,5,8").status_code == 422  # no máximo 3
-    assert cliente.get("/api/comparar?ids=999999").status_code == 404
 
+    assert resposta["viradas"] == []
+    assert cliente.get("/api/comparar?ids=1,2,5,8").status_code == 422
+    assert cliente.get("/api/comparar?ids=999999").status_code == 404
 
 def test_extremos_e_maquina_do_tempo(cliente):
     extremos = cliente.get("/api/ligas/GB1/extremos").json()
@@ -284,17 +263,15 @@ def test_extremos_e_maquina_do_tempo(cliente):
     assert antes["total"] == 0 and antes["com_valor"] == 0
     assert cliente.get("/api/clubes/123456/maquina?data=2020-06-01").status_code == 404
 
-
 def test_clube(cliente):
     inter = cliente.get("/api/clubes/46").json()
     assert inter["nome"] == "Inter Milan" and inter["liga"]["id"] == "IT1"
     assert [j["nome"] for j in inter["elenco"]] == ["Nicolò Barella", "Bukayo Saka", "Jogador Sem Valor"]
     assert cliente.get("/api/clubes/123456").status_code == 404
 
-
 def test_sem_dados_responde_503(tmp_path):
     app.state.base = None
-    app.state.pasta_dados = tmp_path  # pasta vazia: o servidor sobe sem dados
+    app.state.pasta_dados = tmp_path
     try:
         with TestClient(app) as c:
             assert c.get("/api/saude").json()["dados_carregados"] is False

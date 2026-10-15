@@ -1,6 +1,4 @@
-// Página do clube: ficha, elenco atual e a Máquina do tempo — quanto valia,
-// numa data passada, cada jogador do elenco de hoje (uma busca de piso na
-// árvore de histórico de cada um).
+
 
 import { api } from "./api.js?v=7";
 import {
@@ -40,7 +38,7 @@ function mudarAno(ano) {
     return;
   }
   document.getElementById("rotulo-ano").textContent = `Julho de ${ano}`;
-  espera = setTimeout(() => viajar(`${ano}-07-01`, ano), 160); // o controle dispara vários eventos ao arrastar
+  espera = setTimeout(() => viajar(`${ano}-07-01`, ano), 160);
 }
 
 async function viajar(data, ano) {

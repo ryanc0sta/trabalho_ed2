@@ -1,7 +1,5 @@
-// Formatação, ícones e frases dos passos — usados pelas páginas e pelas animações.
 
-// ------------------------------------------------------------------ ícones
-// Conjunto único: Lucide (https://lucide.dev, licença ISC), embutido como SVG.
+
 const ICONES = {
   busca: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
   fechar: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
@@ -30,7 +28,6 @@ const ICONES = {
 export const icone = (nome) =>
   `<svg class="icone" viewBox="0 0 24 24" aria-hidden="true">${ICONES[nome]}</svg>`;
 
-// -------------------------------------------------------------- formatação
 export function esc(texto) {
   return String(texto ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -54,20 +51,18 @@ export function formatarData(iso) {
   return `${dia}/${mes}/${ano}`;
 }
 
-/** Rótulo de um nó do rastro: "erling haaland|418560" -> "erling haaland". */
 export function nomeDoNo(no) {
   if (no === null || no === undefined) return "—";
   const texto = String(no);
   if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) return formatarData(texto);
-  if (/^\d+\|\d+$/.test(texto)) return formatarValor(Number(texto.split("|")[0])); // (valor, id)
-  if (/^\d{12,}$/.test(texto)) { // chave da janela de transferências: dia·10⁶ + sequência
+  if (/^\d+\|\d+$/.test(texto)) return formatarValor(Number(texto.split("|")[0]));
+  if (/^\d{12,}$/.test(texto)) {
     const dia = Math.floor(Number(texto) / 1e6);
     return formatarData(new Date((dia - 719163) * 86400000).toISOString().slice(0, 10));
   }
   return texto.split("|")[0];
 }
 
-// ------------------------------------------------------ frases dos passos
 const DIRECAO = { esquerda: "desce à esquerda", direita: "desce à direita", igual: "é igual — achou" };
 
 const ETAPAS_EM_TEXTO = {
@@ -76,7 +71,6 @@ const ETAPAS_EM_TEXTO = {
   mais_velho: "o mais velho da liga", mais_jovem: "o mais jovem da liga",
 };
 
-/** Frase em português para um passo do rastro. */
 export function descreverPasso(p) {
   const no = nomeDoNo(p.no);
   switch (p.passo) {
@@ -134,4 +128,3 @@ export function descreverPasso(p) {
     default: return `${p.passo} ${p.no ? no : ""}`;
   }
 }
-

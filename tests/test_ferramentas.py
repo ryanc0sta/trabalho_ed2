@@ -1,5 +1,3 @@
-"""Operações acrescentadas para as ferramentas da barra lateral."""
-
 import bisect
 import math
 import random
@@ -16,21 +14,18 @@ from backend.estruturas.skiplist_valor import SkipListValor
 from backend.estruturas.splay import ArvoreAfunilada
 from tests.test_arvores import verificar_avl
 
-
-# ------------------------------------------------- lista: buscas recentes
 def test_inserir_no_inicio_e_remover_ultimo():
     lista = ListaMTF()
     for termo in ("haal", "vini", "saka"):
         assert lista.inserir_no_inicio(termo, termo)
     assert lista.chaves() == ["saka", "vini", "haal"]
-    assert not lista.inserir_no_inicio("vini", "x")  # chave primária
-    lista.buscar("haal")  # movimentação para o início
+    assert not lista.inserir_no_inicio("vini", "x")
+    lista.buscar("haal")
     assert lista.chaves() == ["haal", "saka", "vini"]
     assert lista.remover_ultimo() == "vini"
     assert lista.chaves() == ["haal", "saka"] and len(lista) == 2
     assert lista.remover_ultimo() == "saka" and lista.remover_ultimo() == "haal"
     assert lista.remover_ultimo() is None and lista.cabeca is None
-
 
 def test_esvaziar_lista():
     lista = ListaMTF()
@@ -42,8 +37,6 @@ def test_esvaziar_lista():
     assert rastro.passos == [{"passo": "esvazia", "quantidade": 3}]
     assert lista.inserir_no_inicio("d", "d") and lista.chaves() == ["d"]
 
-
-# ----------------------------------------------- árvore: vizinhos em ordem
 @pytest.mark.parametrize("classe", [ArvoreBinariaBusca, ArvoreAVL, ArvoreAfunilada])
 def test_iterar_nos_dois_sentidos(classe):
     chaves = sorted(random.Random(3).sample(range(1000), 200))
@@ -56,20 +49,17 @@ def test_iterar_nos_dois_sentidos(classe):
         i = bisect.bisect_left(chaves, x)
         assert [c for c, _ in arvore.iterar_a_partir_de(x)] == chaves[i:]
         assert [c for c, _ in arvore.iterar_antes_de(x)] == chaves[:i][::-1]
-    # Sucessores e predecessores imediatos de uma chave existente.
+
     meio = chaves[100]
     assert next(arvore.iterar_a_partir_de(meio + 1))[0] == chaves[101]
     assert next(arvore.iterar_antes_de(meio))[0] == chaves[99]
 
-
-# ------------------------------------------------ AVL com tamanho (ordem)
 def verificar_tam(no):
     if no is None:
         return 0
     total = 1 + verificar_tam(no.esq) + verificar_tam(no.dir)
     assert no.tam == total
     return total
-
 
 def test_avl_ordem_contra_forca_bruta():
     aleatorio = random.Random(17)
@@ -100,24 +90,20 @@ def test_avl_ordem_contra_forca_bruta():
     assert arvore.posicoes(400, 100) == (0, 0)
     assert [c for c, _ in arvore.fatia(len(ordenadas) - 3, 24)] == ordenadas[-3:]
 
-
 def test_avl_ordem_contar_e_logaritmico():
     arvore = ArvoreAVLOrdem()
     arvore.construir_de_ordenados([((valor, i), None) for i, valor in enumerate(range(0, 200_000, 10))])
     verificar_tam(arvore.raiz)
     rastro = Rastro()
-    # Chaves compostas (valor, id): a faixa inclui todo id com o valor nos limites.
+
     total = arvore.contar((50_000, -1), (150_000, math.inf), rastro)
-    assert total == 10_001  # 50000, 50010, ..., 150000
-    assert rastro.comparacoes < 4 * math.log2(20_000)  # sem visitar os 10 mil da faixa
+    assert total == 10_001
+    assert rastro.comparacoes < 4 * math.log2(20_000)
 
-
-# --------------------------------------- Skip List: teto, posição e dedo
 def nomes(n, semente=5):
     aleatorio = random.Random(semente)
     letras = "abcdefghijklmnopqrstuvwxyz"
     return sorted({"".join(aleatorio.choice(letras) for _ in range(6)) for _ in range(n)})
-
 
 def test_posicao_teto_classica_e_modificada():
     chaves = nomes(800)
@@ -132,7 +118,6 @@ def test_posicao_teto_classica_e_modificada():
             resposta = lista.posicao_teto(prefixo)
             assert (resposta and resposta[:2]) == esperado
 
-
 def comparar_com_e_sem_dedo(chaves_buscadas, pares):
     com_dedo = SkipListValor.construir(pares, medida=lambda v: v)
     sem_dedo = SkipListValor.construir(pares, medida=lambda v: v)
@@ -141,54 +126,49 @@ def comparar_com_e_sem_dedo(chaves_buscadas, pares):
         r1, r2 = Rastro(), Rastro()
         resposta = com_dedo.posicao_teto(chave, r1)
         sem_dedo._dedo = None
-        assert resposta == sem_dedo.posicao_teto(chave, r2)  # mesmo resultado sempre
+        assert resposta == sem_dedo.posicao_teto(chave, r2)
         total_com += r1.comparacoes
         total_sem += r2.comparacoes
     return total_com, total_sem, r1
 
-
 def test_busca_dedilhada_economiza_para_alvos_proximos():
     chaves = nomes(3000)
     aleatorio = random.Random(9)
-    pares = [(c, aleatorio.randrange(10**8)) for c in chaves]  # valor independente do nome
-    com, sem, ultimo = comparar_com_e_sem_dedo(chaves[:600:2], pares)  # de 2 em 2 posições
+    pares = [(c, aleatorio.randrange(10**8)) for c in chaves]
+    com, sem, ultimo = comparar_com_e_sem_dedo(chaves[:600:2], pares)
     assert com < 0.5 * sem
     assert any(p["passo"] == "dedo" for p in ultimo.passos)
-
 
 def test_busca_dedilhada_nao_piora_para_alvos_distantes():
     chaves = nomes(3000)
     aleatorio = random.Random(9)
     pares = [(c, aleatorio.randrange(10**8)) for c in chaves]
-    com, sem, ultimo = comparar_com_e_sem_dedo(chaves[::400], pares)  # saltos longos
-    assert com <= 1.1 * sem  # no máximo ~1 comparação a mais por busca
+    com, sem, ultimo = comparar_com_e_sem_dedo(chaves[::400], pares)
+    assert com <= 1.1 * sem
     assert any(p.get("decisao") == "longe" for p in ultimo.passos)
-
 
 def test_digitar_um_nome_aos_poucos_usa_o_dedo():
     chaves = nomes(3000)
     aleatorio = random.Random(9)
     pares = [(c, aleatorio.randrange(10**8)) for c in chaves]
     alvo = chaves[1700]
-    prefixos = [alvo[:k] for k in range(1, len(alvo) + 1)]  # "s", "sa", "sal", ...
+    prefixos = [alvo[:k] for k in range(1, len(alvo) + 1)]
     com, sem, _ = comparar_com_e_sem_dedo(prefixos, pares)
     assert com < sem
-
 
 def test_dedo_volta_ao_inicio_e_e_descartado_quando_a_lista_muda():
     chaves = nomes(500)
     lista = SkipListValor.construir([(c, 1) for c in chaves], medida=lambda v: v)
     assert lista.posicao_teto("m")[0] == bisect.bisect_left(chaves, "m") + 1
     rastro = Rastro()
-    assert lista.posicao_teto("c", rastro)[0] == bisect.bisect_left(chaves, "c") + 1  # chave anterior
-    assert rastro.passos[0]["passo"] == "inicio"  # não usa o dedo: recomeça da cabeça
+    assert lista.posicao_teto("c", rastro)[0] == bisect.bisect_left(chaves, "c") + 1
+    assert rastro.passos[0]["passo"] == "inicio"
     lista.posicao_teto("t")
     lista.inserir("tzzzzz", 1)
     assert lista._dedo is None
     assert lista.posicao_teto("u")[0] == bisect.bisect_left(sorted(chaves + ["tzzzzz"]), "u") + 1
     lista.remover(chaves[0])
     assert lista._dedo is None
-
 
 def test_intercalar_sequencias_ordenadas():
     from backend.estruturas.ordenacao import intercalar

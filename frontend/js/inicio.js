@@ -1,6 +1,4 @@
-// Página inicial. Ação principal: buscar um jogador.
-// "Em alta" = topo da árvore de busca; "Ligas" = lista autoorganizável (as
-// mais visitadas sobem); "Vistos por você" = lista com transposição.
+
 
 import { api } from "./api.js?v=7";
 import {
@@ -11,7 +9,6 @@ import {
 iniciarPagina({ busca: false });
 const campoBusca = montarBusca(document.getElementById("busca-principal"), { grande: true });
 
-// Vindo de uma "busca recente" da barra lateral: refaz a busca.
 const termoInicial = parametro("q");
 if (termoInicial) {
   campoBusca.value = termoInicial;
@@ -23,13 +20,11 @@ const elLigas = document.getElementById("ligas");
 const elAlta = document.getElementById("em-alta");
 const botaoTodas = document.getElementById("ver-todas");
 
-// Mostra as 12 primeiras (as mais visitadas); o resto sob demanda.
 botaoTodas.addEventListener("click", () => {
   const recolhidas = elLigas.classList.toggle("recolhidas");
   botaoTodas.textContent = recolhidas ? `Ver todas as ${elLigas.children.length} ligas` : "Mostrar menos";
 });
 
-// Ordem mostrada da última vez, para animar o que mudou desde então.
 const chaveOrdem = () => "ordem-ligas";
 function lerOrdemAnterior() {
   try {
@@ -42,7 +37,7 @@ function guardarOrdem(ids) {
   try {
     sessionStorage.setItem(chaveOrdem(), JSON.stringify(ids));
   } catch {
-    /* sem armazenamento: apenas não anima */
+
   }
 }
 
@@ -61,7 +56,7 @@ async function carregarLigas() {
     guardarOrdem(novaOrdem);
     const porId = new Map(ligas.map((l) => [l.id, l]));
     const mesmaLista = anterior && anterior.length === ligas.length && anterior.every((id) => porId.has(id));
-    // Desenha na ordem antiga e então anima até a nova (técnica FLIP).
+
     elLigas.innerHTML = (mesmaLista ? anterior : novaOrdem).map((id) => itemLiga(porId.get(id))).join("");
     if (elLigas.classList.contains("recolhidas")) botaoTodas.textContent = `Ver todas as ${ligas.length} ligas`;
     if (mesmaLista) animarReordenacao(novaOrdem);
@@ -79,9 +74,9 @@ function animarReordenacao(novaOrdem) {
   [...elLigas.children].forEach((el, novo) => {
     const a = antes.get(el.dataset.id);
     const d = el.getBoundingClientRect();
-    if (!d.width) return; // continua escondida (além das 12 primeiras)
+    if (!d.width) return;
     if (!a.width) {
-      // Estava escondida e entrou entre as 12 primeiras: aparece no lugar.
+
       el.classList.add("subiu");
       el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 480 });
       setTimeout(() => el.classList.remove("subiu"), 1600);
@@ -114,7 +109,6 @@ async function carregarEmAlta() {
   }
 }
 
-// Recomendações a partir dos perfis que o usuário abriu (a lista de vistos).
 const elRecomendados = document.getElementById("recomendados");
 const elBaseRecomendados = document.getElementById("base-recomendados");
 async function carregarRecomendados() {
@@ -149,6 +143,5 @@ function carregarTudo() {
   montarFrequentes(document.getElementById("frequentes"), document.getElementById("secao-frequentes"));
 }
 
-// Ao voltar pelo botão do navegador, a página pode vir do cache: recarrega.
 window.addEventListener("pageshow", (e) => { if (e.persisted) carregarTudo(); });
 carregarTudo();

@@ -1,6 +1,4 @@
-// Minha lista: jogadores que o usuário marcou para acompanhar.
-// Cada adição e remoção é uma inserção/remoção ao vivo numa lista com saltos
-// (os passos aparecem nos Bastidores).
+
 
 import { api } from "./api.js?v=7";
 import {

@@ -1,15 +1,3 @@
-"""Servidor da aplicação: API em /api e frontend estático em /.
-
-As rotas que mexem nas estruturas devolvem, além do resultado, o RASTRO da
-operação (os passos executados), que o frontend reproduz como animação.
-Rotas com `modo` aceitam "modificado" (padrão) ou "classico", para comparar
-as duas versões de cada estrutura.
-
-As funções são `async` de propósito: assim todas rodam na mesma thread do
-servidor, uma de cada vez, e duas requisições nunca alteram a mesma estrutura
-ao mesmo tempo (as operações levam milissegundos).
-"""
-
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -34,11 +22,9 @@ log = logging.getLogger("uvicorn.error")
 
 Modo = Literal["modificado", "classico"]
 
-
 @asynccontextmanager
 async def ciclo_de_vida(app):
-    """Monta todas as estruturas uma única vez, quando o servidor sobe."""
-    if getattr(app.state, "base", None) is not None:  # já injetada (testes)
+    if getattr(app.state, "base", None) is not None:
         yield
         return
     pasta = getattr(app.state, "pasta_dados", PASTA_DADOS)
@@ -52,21 +38,17 @@ async def ciclo_de_vida(app):
         app.state.base = None
     yield
 
-
 app = FastAPI(
     title="Scout Explorer",
     description="Visualização da base Transfermarkt com listas e árvores de busca.",
     lifespan=ciclo_de_vida,
 )
 
-
-# ------------------------------------------------------------------ auxiliares
 def obter_base(request: Request):
     base = getattr(request.app.state, "base", None)
     if base is None:
         raise HTTPException(503, "Base de dados não carregada (CSVs ausentes em dados/).")
     return base
-
 
 def obter_liga(base, liga_id):
     liga = base.liga(liga_id)
@@ -74,33 +56,25 @@ def obter_liga(base, liga_id):
         raise HTTPException(404, f"Liga {liga_id} não encontrada.")
     return liga
 
-
 def obter_jogador(base, jogador_id):
     jogador = base.jogador(jogador_id)
     if jogador is None:
         raise HTTPException(404, f"Jogador {jogador_id} não encontrado.")
     return jogador
 
-
 def limiar(liga, nivel):
-    """Menor valor de mercado de quem está no nível (Skip List modificada)."""
     return liga.skip.limiares[nivel - 1] if 1 <= nivel <= len(liga.skip.limiares) else 0
 
-
-# ------------------------------------------------------------------------ saúde
 @app.get("/api/saude", tags=["geral"])
 async def saude(request: Request):
     base = getattr(request.app.state, "base", None)
     return {"status": "ok", "dados_carregados": base is not None}
 
-
-# ------------------------------------------------------------------------ ligas
 @app.get("/api/ligas", tags=["ligas"], summary="Ligas na ordem atual da lista")
 async def listar_ligas(request: Request, modo: Modo = "modificado"):
     base = obter_base(request)
     lista = base.ligas if modo == "modificado" else base.ligas_classica
     return {"modo": modo, "ligas": itens_ligas(lista)}
-
 
 @app.post("/api/ligas/{liga_id}/acessar", tags=["ligas"],
           summary="Acessa uma liga: movimentação ponderada ou para o início")
@@ -114,31 +88,25 @@ async def acessar_liga(request: Request, liga_id: str, modo: Modo = "modificado"
     return {"modo": modo, "antes": antes, "depois": itens_ligas(lista),
             "rastro": rastro.para_json()}
 
-
 @app.get("/api/ligas/{liga_id}", tags=["ligas"], summary="Dados da liga e níveis da Skip List")
 async def detalhar_liga(request: Request, liga_id: str):
     base = obter_base(request)
     return detalhe_com_niveis(obter_liga(base, liga_id))
 
-
 def detalhe_com_niveis(colecao):
-    """Liga ou posição com os níveis das suas Skip Lists (modificada e clássica)."""
     niveis = [{"nivel": k, "jogadores": len(colecao.skip.nos_do_nivel(k)),
                "valor_minimo": limiar(colecao, k)} for k in range(colecao.skip.nivel + 1)]
     niveis_classica = [{"nivel": k, "jogadores": len(colecao.skip_classica.nos_do_nivel(k))}
                        for k in range(colecao.skip_classica.nivel + 1)]
     return {**colecao.para_json(), "niveis": niveis, "niveis_classica": niveis_classica}
 
-
 def pagina_de_jogadores(colecao, nivel, pagina, por_pagina, modo):
-    """Uma página dos jogadores de um nível da Skip List de uma liga ou posição."""
     skip = colecao.skip if modo == "modificado" else colecao.skip_classica
     nivel = min(nivel, skip.nivel)
     inicio = (pagina - 1) * por_pagina + 1
     rastro = Rastro()
     if nivel == 0:
-        # Nível 0 = todos: a página é obtida a partir da posição de início
-        # (larguras na modificada; percurso desde o começo na clássica).
+
         total = len(skip)
         triplas = skip.trecho(inicio, por_pagina, rastro)
     else:
@@ -152,7 +120,6 @@ def pagina_de_jogadores(colecao, nivel, pagina, por_pagina, modo):
         "jogadores": nos_skip(triplas, inicio), "rastro": rastro.para_json(),
     }
 
-
 @app.get("/api/ligas/{liga_id}/jogadores", tags=["ligas"],
          summary="Jogadores de um nível da Skip List, paginados")
 async def jogadores_da_liga(request: Request, liga_id: str, nivel: int = Query(0, ge=0),
@@ -162,14 +129,11 @@ async def jogadores_da_liga(request: Request, liga_id: str, nivel: int = Query(0
     liga = obter_liga(base, liga_id)
     return {"liga": liga.para_json(), **pagina_de_jogadores(liga, nivel, pagina, por_pagina, modo)}
 
-
 @app.get("/api/ligas/{liga_id}/estrutura", tags=["ligas"],
          summary="Recorte da Skip List para desenhar as torres")
 async def estrutura_da_liga(request: Request, liga_id: str, nivel_min: int = Query(0, ge=0),
                             inicio: int = Query(1, ge=1), quantidade: int = Query(40, ge=1, le=200),
                             modo: Modo = "modificado"):
-    """Com nivel_min > 0, devolve só os nós desse nível para cima (a "vista de
-    cima"); com nivel_min = 0, um trecho de `quantidade` nós a partir de `inicio`."""
     base = obter_base(request)
     liga = obter_liga(base, liga_id)
     skip = liga.skip if modo == "modificado" else liga.skip_classica
@@ -179,7 +143,6 @@ async def estrutura_da_liga(request: Request, liga_id: str, nivel_min: int = Que
         nos = nos_skip(skip.trecho(inicio, quantidade), inicio)
     return {"modo": modo, "nivel_lista": skip.nivel, "total": len(skip), "nos": nos,
             "limiares": liga.skip.limiares if modo == "modificado" else None}
-
 
 @app.get("/api/ligas/{liga_id}/localizar/{jogador_id}", tags=["ligas"],
          summary="Busca um jogador na Skip List da liga (rastro da descida)")
@@ -198,8 +161,6 @@ async def localizar_na_liga(request: Request, liga_id: str, jogador_id: int,
     return {"modo": modo, "encontrado": encontrado, "posicao": posicao,
             "rastro": rastro.para_json()}
 
-
-# -------------------------------------------------------------------- jogadores
 @app.get("/api/busca", tags=["jogadores"], summary="Autocompletar por nome ou sobrenome")
 async def buscar_jogadores(request: Request, q: str = Query(..., min_length=1),
                            limite: int = Query(8, ge=1, le=30)):
@@ -208,7 +169,6 @@ async def buscar_jogadores(request: Request, q: str = Query(..., min_length=1),
     sugestoes = base.sugerir(q, limite, rastro)
     return {"q": q, "sugestoes": [j.resumo() | {"ativo": j.ativo} for j in sugestoes],
             "rastro": rastro.para_json()}
-
 
 @app.post("/api/jogadores/{jogador_id}/acessar", tags=["jogadores"],
           summary="Registra a visita: afunilamento (condicional ou clássico) e frequentes")
@@ -229,7 +189,6 @@ async def acessar_jogador(request: Request, jogador_id: int, modo: Modo = "modif
                        "depois": [{"id": j.id, "nome": j.nome} for _, j in base.frequentes],
                        "rastro": rastro_vistos.para_json()}}
 
-
 @app.get("/api/em-alta", tags=["jogadores"],
          summary="Os jogadores mais valiosos (maior chave e predecessores na árvore por valor)")
 async def em_alta(request: Request, quantos: int = Query(6, ge=1, le=24)):
@@ -242,20 +201,16 @@ async def em_alta(request: Request, quantos: int = Query(6, ge=1, le=24)):
         "arvore": recorte_arvore(base.por_valor, [(float("inf"), 0)], profundidade=2, dados_no=dados_no_valor),
     }
 
-
 MOTIVOS = {
     "clube": "Mesmo clube de {}",
     "liga": "Mesma posição e liga de {}",
     "pais": "Mesmo país e posição de {}",
 }
 
-
 @app.get("/api/recomendados", tags=["jogadores"],
          summary="Recomendações a partir dos perfis abertos (árvore de afinidades)")
 async def recomendados(request: Request, jogador_id: int | None = None,
                        limite: int = Query(8, ge=1, le=24)):
-    """Com `jogador_id`, recomenda a partir desse jogador; sem ele, a partir
-    dos três primeiros da lista de vistos."""
     base = obter_base(request)
     if jogador_id is not None:
         fontes = [obter_jogador(base, jogador_id)]
@@ -275,12 +230,10 @@ async def recomendados(request: Request, jogador_id: int | None = None,
         if fontes else None,
     }
 
-
 @app.get("/api/frequentes", tags=["jogadores"], summary="Jogadores frequentes (transposição)")
 async def frequentes(request: Request):
     base = obter_base(request)
     return {"jogadores": [j.resumo() for _, j in base.frequentes]}
-
 
 @app.get("/api/jogadores/{jogador_id}", tags=["jogadores"],
          summary="Página do jogador: dados, histórico (AVL) e transferências")
@@ -288,7 +241,7 @@ async def detalhar_jogador(request: Request, jogador_id: int):
     base = obter_base(request)
     jogador = obter_jogador(base, jogador_id)
     rastro = Rastro()
-    avl = base.historico(jogador_id, rastro)  # a montagem fica no rastro (rotações)
+    avl = base.historico(jogador_id, rastro)
     clube = base.clube(jogador.clube_id) if jogador.clube_id is not None else None
     liga = base.liga(jogador.liga_id) if jogador.liga_id else None
     return {
@@ -302,7 +255,6 @@ async def detalhar_jogador(request: Request, jogador_id: int):
         "arvore": recorte_arvore(avl, profundidade=64, dados_no=dados_no_historico),
         "rastro_montagem": rastro.para_json(),
     }
-
 
 @app.get("/api/jogadores/{jogador_id}/valor", tags=["jogadores"],
          summary="Valor de mercado numa data (busca de piso na AVL)")
@@ -319,7 +271,6 @@ async def valor_em(request: Request, jogador_id: int,
         "rastro": rastro.para_json(),
         "arvore": recorte_arvore(avl, profundidade=64, dados_no=dados_no_historico),
     }
-
 
 @app.get("/api/jogadores/{jogador_id}/pico", tags=["jogadores"],
          summary="Maior valor num período (AVL aumentada ou percurso clássico)")
@@ -342,10 +293,7 @@ async def pico(request: Request, jogador_id: int,
         "arvore": recorte_arvore(avl, profundidade=64, dados_no=dados_no_historico),
     }
 
-
 def pico_classico(arvore: ArvoreAVL, de, ate, rastro):
-    """Sem o máximo da subárvore: percorre em ordem todas as datas do
-    período (e as anteriores a ele) — θ(n) no pior caso."""
     melhor = None
     for data, valor in arvore.em_ordem():
         rastro.registrar("compara", no=data, decisao="visita")
@@ -356,7 +304,6 @@ def pico_classico(arvore: ArvoreAVL, de, ate, rastro):
     if melhor:
         rastro.registrar("pico", no=melhor[0], valor=melhor[1])
     return melhor
-
 
 @app.get("/api/jogadores/{jogador_id}/parecidos", tags=["ferramentas"],
          summary="Jogadores da mesma posição com valor mais próximo (vizinhos na árvore por valor)")
@@ -369,8 +316,6 @@ async def parecidos(request: Request, jogador_id: int):
             "rastro": rastro.para_json(),
             "arvore": recorte_arvore(base.por_valor, [chave], profundidade=2, dados_no=dados_no_valor)}
 
-
-# ------------------------------------------------------------------ ferramentas
 @app.get("/api/lateral", tags=["ferramentas"], summary="Dados da barra lateral")
 async def lateral(request: Request):
     base = obter_base(request)
@@ -380,7 +325,6 @@ async def lateral(request: Request):
         "vistos": [j.resumo() for _, j in base.frequentes],
     }
 
-
 @app.get("/api/minha-lista", tags=["ferramentas"], summary="Lista de observação (Skip List)")
 async def minha_lista(request: Request, modo: Modo = "modificado"):
     base = obter_base(request)
@@ -388,7 +332,6 @@ async def minha_lista(request: Request, modo: Modo = "modificado"):
     jogadores = nos_skip(skip.torres(0), 1)
     return {"modo": modo, "total": len(skip), "nivel_lista": skip.nivel,
             "valor_total": sum(j["valor"] or 0 for j in jogadores), "jogadores": jogadores}
-
 
 @app.put("/api/minha-lista/{jogador_id}", tags=["ferramentas"],
          summary="Adiciona um jogador à lista: inserção na Skip List")
@@ -400,7 +343,6 @@ async def adicionar_a_lista(request: Request, jogador_id: int, modo: Modo = "mod
     return {"modo": modo, "adicionado": adicionado, "total": len(base.minha_lista),
             "rastro": rastro.para_json()}
 
-
 @app.delete("/api/minha-lista/{jogador_id}", tags=["ferramentas"],
             summary="Remove um jogador da lista: remoção na Skip List")
 async def remover_da_lista(request: Request, jogador_id: int, modo: Modo = "modificado"):
@@ -411,7 +353,6 @@ async def remover_da_lista(request: Request, jogador_id: int, modo: Modo = "modi
     return {"modo": modo, "removido": removido, "total": len(base.minha_lista),
             "rastro": rastro.para_json()}
 
-
 @app.post("/api/buscas", tags=["ferramentas"],
           summary="Registra um termo buscado (movimentação para o início)")
 async def registrar_busca(request: Request, q: str = Query(..., min_length=1, max_length=60)):
@@ -421,7 +362,6 @@ async def registrar_busca(request: Request, q: str = Query(..., min_length=1, ma
     base.registrar_busca(q, rastro=rastro)
     return {"antes": antes, "buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
 
-
 @app.delete("/api/buscas", tags=["ferramentas"], summary="Limpa as buscas recentes")
 async def limpar_buscas(request: Request):
     base = obter_base(request)
@@ -429,7 +369,6 @@ async def limpar_buscas(request: Request):
     antes = base.buscas.chaves()
     base.limpar_buscas(rastro)
     return {"antes": antes, "buscas": base.buscas.chaves(), "rastro": rastro.para_json()}
-
 
 @app.get("/api/faixa", tags=["ferramentas"],
          summary="Jogadores numa faixa de valor (intervalo, piso e teto na árvore por valor)")
@@ -451,7 +390,6 @@ async def faixa_de_valor(request: Request, minimo: int = Query(0, ge=0), maximo:
                                  profundidade=2, dados_no=dados_no_valor),
     }
 
-
 @app.get("/api/ligas/{liga_id}/ir-para", tags=["ferramentas"],
          summary="Primeiro jogador da liga a partir de um nome (teto + busca dedilhada)")
 async def ir_para(request: Request, liga_id: str, q: str = Query(..., min_length=1, max_length=60),
@@ -468,23 +406,18 @@ async def ir_para(request: Request, liga_id: str, q: str = Query(..., min_length
     return {"modo": modo, "posicao": posicao, "pagina": (posicao - 1) // por_pagina + 1,
             "jogador": jogador.resumo(), "rastro": rastro.para_json()}
 
-
-# ------------------------------------------------------------- segunda leva
 def obter_posicao(base, posicao_id):
     posicao = base.posicao(posicao_id)
     if posicao is None:
         raise HTTPException(404, f"Posição {posicao_id} não encontrada.")
     return posicao
 
-
 def itens_posicoes(base):
     return [posicao.para_json() for _, posicao in base.posicoes]
-
 
 @app.get("/api/posicoes", tags=["ferramentas"], summary="Posições na ordem atual da lista")
 async def listar_posicoes(request: Request):
     return {"posicoes": itens_posicoes(obter_base(request))}
-
 
 @app.post("/api/posicoes/{posicao_id}/acessar", tags=["ferramentas"],
           summary="Escolhe uma posição: movimentação para o início (Exemplo 1 do enunciado)")
@@ -497,7 +430,6 @@ async def acessar_posicao(request: Request, posicao_id: str):
     return {"antes": antes, "depois": itens_posicoes(base), "rastro": rastro.para_json(),
             "posicao": detalhe_com_niveis(posicao)}
 
-
 @app.get("/api/posicoes/{posicao_id}/jogadores", tags=["ferramentas"],
          summary="Jogadores de um nível da Skip List da posição, paginados")
 async def jogadores_da_posicao(request: Request, posicao_id: str, nivel: int = Query(0, ge=0),
@@ -506,7 +438,6 @@ async def jogadores_da_posicao(request: Request, posicao_id: str, nivel: int = Q
     base = obter_base(request)
     posicao = obter_posicao(base, posicao_id)
     return {"posicao": posicao.para_json(), **pagina_de_jogadores(posicao, nivel, pagina, por_pagina, modo)}
-
 
 @app.get("/api/transferencias", tags=["ferramentas"],
          summary="Transferências de um período (busca binária na lista ordenada por data)")
@@ -529,7 +460,6 @@ async def janela_de_transferencias(request: Request, de: str = Query(..., patter
         "rastro": rastro.para_json(),
     }
 
-
 @app.get("/api/comparar", tags=["ferramentas"],
          summary="Históricos de até 3 jogadores numa linha do tempo (intercalação de percursos em ordem)")
 async def comparar(request: Request, ids: str = Query(..., pattern=r"^\d+(,\d+){0,2}$")):
@@ -537,7 +467,7 @@ async def comparar(request: Request, ids: str = Query(..., pattern=r"^\d+(,\d+){
     jogadores = [obter_jogador(base, int(i)) for i in ids.split(",")]
     rastro = Rastro()
     arvores, linha = base.comparar(jogadores, rastro)
-    # Percorre a linha do tempo conjunta uma vez para achar as trocas de liderança.
+
     atuais, lider, viradas = [None] * len(jogadores), None, []
     for data, indice, valor in linha:
         atuais[indice] = valor
@@ -554,7 +484,6 @@ async def comparar(request: Request, ids: str = Query(..., pattern=r"^\d+(,\d+){
         "rastro": rastro.para_json(),
     }
 
-
 @app.get("/api/ligas/{liga_id}/extremos", tags=["ferramentas"],
          summary="O mais velho, o mais jovem, o mais baixo e o mais alto da liga (menor e maior chave)")
 async def extremos(request: Request, liga_id: str):
@@ -570,7 +499,6 @@ async def extremos(request: Request, liga_id: str):
                                  dados_no=lambda no: {"nome": no.valor.nome, "nascimento": no.chave[1],
                                                       "grupo": no.chave[0]}),
     }
-
 
 @app.get("/api/clubes/{clube_id}/maquina", tags=["ferramentas"],
          summary="Valor do elenco atual numa data passada (busca de piso em cada histórico)")
@@ -593,8 +521,6 @@ async def maquina_do_tempo(request: Request, clube_id: int, data: str = Query(..
         "alvo": linhas[0][2] if linhas else None,
     }
 
-
-# ----------------------------------------------------------------------- clubes
 @app.get("/api/clubes/{clube_id}", tags=["clubes"], summary="Clube e elenco atual")
 async def detalhar_clube(request: Request, clube_id: int):
     base = obter_base(request)
@@ -607,17 +533,11 @@ async def detalhar_clube(request: Request, clube_id: int):
             "liga": {"id": liga.id, "nome": liga.nome, "logo": liga.logo} if liga else None,
             "elenco": [j.resumo() for j in elenco]}
 
-
-# Montado por último para não encobrir as rotas /api.
 class Estaticos(StaticFiles):
-    """Arquivos do frontend com "Cache-Control: no-cache": o navegador guarda os
-    arquivos, mas sempre confere com o servidor se mudaram (resposta 304 quando
-    não). Sem isso, um CSS ou JS antigo podia continuar em uso após uma mudança."""
 
     async def get_response(self, path, scope):
         resposta = await super().get_response(path, scope)
         resposta.headers["Cache-Control"] = "no-cache"
         return resposta
-
 
 app.mount("/", Estaticos(directory=RAIZ / "frontend", html=True), name="frontend")

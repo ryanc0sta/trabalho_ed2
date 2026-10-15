@@ -1,5 +1,6 @@
 # Base Transfermarkt (~900 MB) — baixar separadamente e colocar em dados/
 dados/*.csv
+backend/dados/*.csv
 
 .venv/
 __pycache__/

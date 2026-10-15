@@ -1,12 +1,4 @@
-"""Lista encadeada simples com busca sequencial (slides: Busca Linear, parte 1).
-
-Serve de base para as listas autoorganizáveis (movimentação para o início e
-transposição): elas herdam esta classe e redefinem apenas `_reorganizar`,
-chamado depois que a busca encontra o elemento.
-"""
-
 from .rastro import RASTRO_NULO, rotulo
-
 
 class NoLista:
     __slots__ = ("chave", "valor", "prox")
@@ -16,19 +8,12 @@ class NoLista:
         self.valor = valor
         self.prox = prox
 
-
 class ListaEncadeada:
     def __init__(self):
         self.cabeca = None
         self.tamanho = 0
 
-    # ------------------------------------------------------------------ busca
     def buscar(self, chave, rastro=None):
-        """Busca sequencial. Retorna o valor associado à chave ou None.
-
-        Guarda o anterior e o anterior do anterior para que as subclasses
-        possam reorganizar a lista em tempo constante após encontrar o nó.
-        """
         r = rastro or RASTRO_NULO
         ante_anterior, anterior, atual = None, None, self.cabeca
         posicao = 0
@@ -45,8 +30,6 @@ class ListaEncadeada:
         return None
 
     def consultar(self, chave):
-        """Busca sequencial que nunca reorganiza a lista — para leituras
-        internas que não devem contar como acesso do usuário."""
         atual = self.cabeca
         while atual is not None:
             if atual.chave == chave:
@@ -55,15 +38,12 @@ class ListaEncadeada:
         return None
 
     def _reorganizar(self, ante_anterior, anterior, atual, posicao, rastro):
-        """Busca sequencial simples: não altera a lista."""
+        pass
 
     def _novo_no(self, chave, valor):
         return NoLista(chave, valor)
 
-    # ------------------------------------------------------ inserção/remoção
     def inserir(self, chave, valor, rastro=None):
-        """Insere no final, se a chave ainda não existir (chave primária).
-        Custo θ(n), pois é preciso percorrer a lista para checar duplicatas."""
         r = rastro or RASTRO_NULO
         anterior, atual = None, self.cabeca
         while atual is not None:
@@ -81,8 +61,6 @@ class ListaEncadeada:
         return True
 
     def inserir_no_inicio(self, chave, valor, rastro=None):
-        """Insere como primeiro elemento, se a chave ainda não existir.
-        A ligação é θ(1), mas checar a duplicata ainda percorre a lista."""
         r = rastro or RASTRO_NULO
         if self.consultar(chave) is not None:
             r.registrar("duplicada", no=rotulo(chave))
@@ -95,16 +73,12 @@ class ListaEncadeada:
         return True
 
     def esvaziar(self, rastro=None):
-        """Remove todos os elementos de uma vez: basta a lista soltar o
-        primeiro nó — os demais só eram alcançáveis a partir dele. θ(1)."""
         r = rastro or RASTRO_NULO
         r.registrar("esvazia", quantidade=self.tamanho)
         self.cabeca = None
         self.tamanho = 0
 
     def remover_ultimo(self, rastro=None):
-        """Remove o último elemento (o menos recente numa lista com
-        movimentação para o início). Retorna a chave removida ou None."""
         r = rastro or RASTRO_NULO
         if self.cabeca is None:
             return None
@@ -137,7 +111,6 @@ class ListaEncadeada:
         r.registrar("remove", no=rotulo(chave), posicao=posicao)
         return True
 
-    # --------------------------------------------------------------- consulta
     def __iter__(self):
         atual = self.cabeca
         while atual is not None:

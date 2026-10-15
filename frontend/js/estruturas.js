@@ -1,14 +1,7 @@
-// Catálogo "qual estrutura cada ferramenta usa" e as animações dos Bastidores.
-//
-// Cada operação do site chega com o RASTRO devolvido pelo servidor (os passos
-// que o algoritmo realmente executou). Uma "cena" transforma o rastro em
-// quadros; o reprodutor mostra um quadro por vez, com uma única frase.
-//
-// Cenas: lista (encadeada), torres (lista com saltos), árvore e vetor (busca binária).
+
 
 import { esc, formatarValor, icone, nomeDoNo } from "./formato.js?v=7";
 
-// ---------------------------------------------------------------- catálogo
 export const ESTRUTURAS = {
   "lista-ordenada": {
     nome: "Lista ordenada", tipo: "linear",
@@ -156,13 +149,11 @@ export const FERRAMENTAS = {
 
 export const nomeDoTipo = (tipo) => (tipo === "linear" ? "Estrutura linear" : "Estrutura hierárquica");
 
-/** Etiqueta que diz se a ferramenta usa a estrutura clássica (como nos slides) ou uma versão modificada. */
 export function etiquetaDeVersao(ferramenta) {
   const modificada = Boolean(FERRAMENTAS[ferramenta].modificada);
   return `<span class="versao-estrutura${modificada ? " modificada" : ""}">${modificada ? "Modificada" : "Clássica"}</span>`;
 }
 
-/** Selo clicável que diz qual estrutura a ferramenta usa (abre os Bastidores nela). */
 export function selo(ferramenta, { soIcone = false } = {}) {
   const estrutura = ESTRUTURAS[FERRAMENTAS[ferramenta].estrutura];
   const modificada = Boolean(FERRAMENTAS[ferramenta].modificada);
@@ -171,9 +162,8 @@ export function selo(ferramenta, { soIcone = false } = {}) {
     ${icone(estrutura.tipo)}${soIcone ? "" : `<span>${esc(estrutura.nome)}</span>${modificada ? '<span class="mod">modificada</span>' : ""}`}</button>`;
 }
 
-// ------------------------------------------------------------- utilitários
 const NS = "http://www.w3.org/2000/svg";
-const L = 512; // largura lógica do palco
+const L = 512;
 
 function el(tag, atributos = {}, texto) {
   const e = document.createElementNS(NS, tag);
@@ -186,7 +176,6 @@ const limitar = (v, min, max) => Math.max(min, Math.min(max, v));
 const nome = (no) => `“${nomeDoNo(no)}”`;
 const reduzirMovimento = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// ===================================================================== lista
 function cenaLista(op) {
   const { antes = [], depois = [] } = op.cena || {};
   const itens = new Map();
@@ -238,7 +227,7 @@ function cenaLista(op) {
   return {
     altura, quadros,
     montar(svg) {
-      for (let i = 0; i < itens.size - 1; i++) { // setas entre posições vizinhas da mesma linha
+      for (let i = 0; i < itens.size - 1; i++) {
         if (i % colunas === colunas - 1) continue;
         const [x, y] = centro(i);
         svg.append(el("path", { class: "seta", d: `M${x + 31} ${y}h9m-3 -3l3 3l-3 3` }));
@@ -274,12 +263,11 @@ function cenaLista(op) {
   };
 }
 
-// ==================================================================== torres
 function cenaTorres(op) {
   const passos = op.rastro?.passos || [];
-  // Colunas: só os nós que a operação tocou, em ordem (mais início e fim).
+
   const nos = new Map();
-  const novos = new Set(); // nós inseridos: a torre aparece durante a animação
+  const novos = new Set();
   for (const p of passos) {
     if (p.no === undefined || p.no === "sentinela" || p.no === "cabeca") continue;
     const no = nos.get(p.no) || { id: p.no, torre: 0 };
@@ -288,7 +276,7 @@ function cenaTorres(op) {
     if (p.passo === "liga") novos.add(p.no);
     nos.set(p.no, no);
   }
-  // Sem busca (vista de um nível alto, ou percurso clássico): desenha as torres da página.
+
   const torresDaPagina = op.cena?.torres || [];
   const semBusca = nos.size === 0;
   if (semBusca) torresDaPagina.forEach((t, k) => nos.set(t.no, { id: t.no, torre: t.nivel, pos: k }));
@@ -307,7 +295,7 @@ function cenaTorres(op) {
 
   let cursor = null;
   let achado = null;
-  const visiveis = new Map([...novos].map((id) => [id, -1])); // id -> último andar ligado
+  const visiveis = new Map([...novos].map((id) => [id, -1]));
   const quadros = [];
   const quadro = (legenda, sonda = null) => quadros.push({ cursor: cursor && { ...cursor }, sonda, achado, visiveis: new Map(visiveis), legenda });
   let anterior = null;
@@ -338,7 +326,7 @@ function cenaTorres(op) {
       case "salta": cursor = { c: coluna(p.no), n: p.nivel }; quadro(`Nível ${p.nivel}: salta até ${nome(p.no)}, na posição ${p.posicao}.`); break;
       case "desce":
         if (cursor) cursor = { c: cursor.c, n: Math.max(0, p.nivel - 1) };
-        if (anterior === "desce") quadros.pop(); // vários "desce" seguidos viram um quadro só
+        if (anterior === "desce") quadros.pop();
         quadro(`Desce até o nível ${Math.max(0, p.nivel - 1)}.`);
         break;
       case "percorre":
@@ -388,7 +376,7 @@ function cenaTorres(op) {
   const x = (c) => margem + c * passoX;
   const y = (n) => base - n * passoY - passoY / 2;
   const lado = Math.min(passoX - 3, passoY - 3, 14);
-  const celulas = []; // {c, n, id, rect}
+  const celulas = [];
   const rotulos = [];
   let bolinha;
 
@@ -431,7 +419,6 @@ function cenaTorres(op) {
   };
 }
 
-// ==================================================================== árvore
 const EXPLICA_CASO = {
   zig: "o alvo é filho da raiz: basta uma rotação",
   zag: "o alvo é filho da raiz: basta uma rotação",
@@ -443,7 +430,7 @@ const EXPLICA_CASO = {
 
 function rotuloDoNo(dados) {
   if (dados.data) return `${dados.data.slice(5, 7)}/${dados.data.slice(2, 4)}`;
-  if (dados.nascimento) return dados.nascimento.slice(0, 4); // árvore por idade: o ano de nascimento
+  if (dados.nascimento) return dados.nascimento.slice(0, 4);
   if (dados.tam !== undefined) return formatarValor(dados.valor);
   const partes = String(dados.nome ?? nomeDoNo(dados.id)).split(" ");
   return curto(partes[partes.length - 1], 9);
@@ -451,7 +438,7 @@ function rotuloDoNo(dados) {
 
 function cenaArvore(op) {
   const passos = op.rastro?.passos || [];
-  // Estrutura: raiz + filhos de cada nó; os quadros guardam cópias (as rotações a alteram).
+
   const dados = new Map();
   const filhos = new Map();
   const ler = (no) => {
@@ -513,13 +500,13 @@ function cenaArvore(op) {
     switch (p.passo) {
       case "etapa":
         atual = estrutura.raiz; visitados.clear(); marcas.clear();
-        // Descidas que repetem a ideia da anterior ganham um quadro só.
+
         resumido = ["pagina", "liga", "pais", "mais_jovem"].includes(p.nome);
         quadro(ETAPAS[p.nome] || "");
         break;
       case "compara": {
-        if (depoisDoAcesso || resumido) break; // descidas repetidas não ganham quadros próprios
-        if (passos[indice + 1]?.passo === "conta_subarvore") break; // o próximo quadro já explica este nó
+        if (depoisDoAcesso || resumido) break;
+        if (passos[indice + 1]?.passo === "conta_subarvore") break;
         atual = p.no; visitados.add(p.no);
         if (ehPico && p.decisao !== "visita") { quadro(`Segue pela borda do período: ${rotulo(p.no)}.`); break; }
         const destino = { esquerda: "o alvo vem antes: vai para a esquerda", direita: "o alvo vem depois: vai para a direita", igual: "é o alvo", visita: "confere este nó" }[p.decisao] || p.decisao;
@@ -572,7 +559,6 @@ function cenaArvore(op) {
     quadro(op.cena.legendaFinal || `Resposta: ${rotulo(alvo)}.`);
   }
 
-  // Árvores pequenas (o histórico de um jogador) são apertadas para caber inteiras no palco.
   const dx = limitar((L - 60) / Math.max(1, dados.size - 1), 24, 46);
   const dy = 50;
   const altura = 300;
@@ -591,13 +577,13 @@ function cenaArvore(op) {
     andar(e.raiz, 0);
     return { pos, largura: Math.max(0, coluna - 1) * dx, altura: fundo * dy };
   }
-  const desenhos = new Map(); // estrutura -> layout
+  const desenhos = new Map();
   const layout = (e) => { if (!desenhos.has(e)) desenhos.set(e, calcular(e)); return desenhos.get(e); };
 
   const grupos = new Map();
   const linhas = [];
   let camada;
-  let estado = null; // posições e câmera atualmente desenhadas
+  let estado = null;
   let animacao = 0;
 
   function alvoVisual(q) {
@@ -690,17 +676,15 @@ function cenaArvore(op) {
   };
 }
 
-// ===================================================================== vetor
-/** Número do dia (como no servidor) -> "dd/mm/aaaa". */
 function dataDoDia(chave) {
   const dia = Math.floor(Number(chave) / 1e6);
   return new Date((dia - 719163) * 86400000).toISOString().slice(0, 10).split("-").reverse().join("/");
 }
 
 function cenaVetor(op) {
-  // Comparações da busca binária (as "de limite" são da busca por interpolação, que não é animada).
+
   const comparacoes = (op.rastro?.passos || []).filter((p) => p.passo === "compara" && p.meio !== undefined && p.decisao !== "limite");
-  const datas = op.cena?.chave === "dia"; // lista de transferências: a chave é um dia
+  const datas = op.cena?.chave === "dia";
   const itens = datas ? "transferências, em ordem de data" : "trechos de nomes, em ordem alfabética";
   const total = op.cena?.total ?? (comparacoes.length ? comparacoes[0].meio * 2 + 1 : 0);
   let inf = 0;
@@ -723,7 +707,7 @@ function cenaVetor(op) {
   const passoY = 17;
   const altura = faixas.length * passoY + 16;
   const larguraMaxima = L - 150;
-  // Escala linear: cada barra tem metade da anterior — é a busca binária "a olho".
+
   const escala = (n) => (total > 0 ? Math.max(3, (larguraMaxima * n) / total) : 3);
   const linhas = [];
   return {
@@ -747,15 +731,12 @@ function cenaVetor(op) {
   };
 }
 
-// ============================================================== intercalação
-// Uma fileira por jogador (as avaliações na ordem em que a árvore as entrega)
-// e, embaixo, a linha do tempo conjunta sendo montada.
 function cenaIntercalacao(op) {
   const nomes = op.cena?.nomes || [];
   const tamanhos = op.cena?.tamanhos || [];
   const picks = (op.rastro?.passos || []).filter((p) => p.passo === "intercala");
   const total = picks.length;
-  const lote = Math.max(1, Math.ceil(total / 36)); // animações longas avançam alguns pontos por quadro
+  const lote = Math.max(1, Math.ceil(total / 36));
   const quadros = [{ feitos: 0, legenda: "Cada fileira é o histórico de um jogador, já em ordem de data — é assim que o percurso da árvore entrega." }];
   for (let feitos = lote; feitos < total + lote; feitos += lote) {
     const n = Math.min(feitos, total);
@@ -772,7 +753,7 @@ function cenaIntercalacao(op) {
   const passoY = 34;
   const altura = (nomes.length + 1) * passoY + 30;
   const maior = Math.max(1, ...tamanhos);
-  const pontos = []; // {ordem na linha do tempo, fonte, origem, destino}
+  const pontos = [];
   const vistos = nomes.map(() => 0);
   picks.forEach((p, k) => {
     const i = vistos[p.fonte]++;
@@ -805,15 +786,8 @@ function cenaIntercalacao(op) {
   };
 }
 
-// ================================================================ reprodutor
 const CENAS = { lista: cenaLista, torres: cenaTorres, arvore: cenaArvore, vetor: cenaVetor, intercalacao: cenaIntercalacao };
 
-/**
- * Monta a animação de uma operação dentro de `container`.
- * Controles: tocar/pausar, passo anterior e próximo, barra para arrastar
- * pelos passos e as setas ← → do teclado.
- * Devolve uma função que interrompe a animação (para trocar de operação).
- */
 export function montarAnimacao(container, op) {
   const tipo = FERRAMENTAS[op.ferramenta]?.cena;
   const criar = CENAS[tipo];
@@ -848,7 +822,7 @@ export function montarAnimacao(container, op) {
 
   let indice = 0;
   let relogio = null;
-  const intervalo = limitar(10000 / total, 280, 1400); // animações longas andam mais depressa
+  const intervalo = limitar(10000 / total, 280, 1400);
 
   const mostrar = (i, animar = true) => {
     indice = limitar(i, 0, total - 1);
@@ -883,7 +857,7 @@ export function montarAnimacao(container, op) {
   document.addEventListener("keydown", teclado);
 
   mostrar(0, false);
-  if (reduzirMovimento()) mostrar(total - 1, false); // sem animação: mostra o resultado
+  if (reduzirMovimento()) mostrar(total - 1, false);
   else if (total > 1) tocar();
   return () => { parar(); document.removeEventListener("keydown", teclado); };
 }

@@ -11,16 +11,13 @@ from backend.estruturas.splay import ArvoreAfunilada
 
 ARVORES = [ArvoreBinariaBusca, ArvoreAVL, ArvoreAfunilada]
 
-
 def verificar_avl(no):
-    """Retorna a altura real, conferindo altura armazenada e balanceamento."""
     if no is None:
         return 0
     he, hd = verificar_avl(no.esq), verificar_avl(no.dir)
     assert no.altura == 1 + max(he, hd)
     assert abs(balanceamento(no)) <= 1
     return no.altura
-
 
 @pytest.mark.parametrize("classe", ARVORES)
 def test_operacoes_aleatorias(classe):
@@ -42,7 +39,6 @@ def test_operacoes_aleatorias(classe):
     if classe is ArvoreAVL:
         verificar_avl(arvore.raiz)
 
-
 @pytest.mark.parametrize("classe", ARVORES)
 def test_piso_teto_e_a_partir_de(classe):
     chaves = list(range(0, 300, 7))
@@ -59,14 +55,12 @@ def test_piso_teto_e_a_partir_de(classe):
     assert [c for c, _ in arvore.a_partir_de(50, 4)] == [56, 63, 70, 77]
     assert arvore.a_partir_de(1000, 3) == []
 
-
 def test_a_partir_de_com_prefixo_de_texto():
     arvore = ArvoreAfunilada()
     nomes = ["ney", "neymar|1", "neymar|2", "neto|5", "messi|3", "nunes|9"]
     arvore.construir_de_ordenados([(n, None) for n in sorted(nomes)])
     sugestoes = [c for c, _ in arvore.a_partir_de("ney", 10) if c.startswith("ney")]
     assert sugestoes == ["ney", "neymar|1", "neymar|2"]
-
 
 @pytest.mark.parametrize("classe", ARVORES)
 def test_construir_de_ordenados_e_balanceado(classe):
@@ -79,15 +73,12 @@ def test_construir_de_ordenados_e_balanceado(classe):
         verificar_avl(arvore.raiz)
     assert arvore.inserir(5000, 1) and arvore.buscar(5000) == 1
 
-
 def test_primeiros_niveis():
     arvore = ArvoreBinariaBusca()
     arvore.construir_de_ordenados([(c, None) for c in range(7)])
     niveis = [[c for c, _ in nivel] for nivel in arvore.primeiros_niveis(2)]
     assert niveis == [[3], [1, 5]]
 
-
-# ------------------------------------------------------------------------ AVL
 @pytest.mark.parametrize(
     "ordem, caso",
     [
@@ -108,14 +99,12 @@ def test_avl_quatro_casos(ordem, caso):
     rotacoes = [p for p in rastro.passos if p["passo"] == "rotacao"]
     assert len(rotacoes) == (1 if caso in ("esquerda-esquerda", "direita-direita") else 2)
 
-
 def test_avl_altura_logaritmica_com_insercoes_em_ordem():
     arvore = ArvoreAVL()
     for c in range(10000):
         arvore.inserir(c, None)
     verificar_avl(arvore.raiz)
     assert arvore.altura() <= 1.44 * math.log2(10000 + 2)
-
 
 def test_avl_remocao_propaga_rebalanceamento():
     arvore = ArvoreAVL()
@@ -126,23 +115,20 @@ def test_avl_remocao_propaga_rebalanceamento():
         verificar_avl(arvore.raiz)
     assert [c for c, _ in arvore] == [c for c in range(100) if c % 3]
 
-
-# --------------------------------------------------------------------- Splay
 def test_splay_busca_leva_a_raiz():
     arvore = ArvoreAfunilada()
     arvore.construir_de_ordenados([(c, str(c)) for c in range(100)])
     for c in [17, 90, 3, 17, 55]:
         assert arvore.buscar(c) == str(c)
         assert arvore.raiz.chave == c
-    # Busca malsucedida afunila o último nó visitado (vizinho da chave).
+
     assert arvore.buscar(17.5) is None
     assert arvore.raiz.chave in (17, 18)
-
 
 @pytest.mark.parametrize(
     "caminho, caso",
     [
-        # árvore: 3 -> (2 -> 1) — alvo 1 é esq. do esq.
+
         ([3, 2, 1], "zig-zig"),
         ([1, 2, 3], "zag-zag"),
         ([3, 1, 2], "zag-zig"),
@@ -162,7 +148,6 @@ def test_splay_casos(caminho, caso):
     assert len([p for p in rastro.passos if p["passo"] == "rotacao"]) == 2
     assert [c for c, _ in splay] == [1, 2, 3]
 
-
 def test_splay_zig_quando_alvo_e_filho_da_raiz():
     splay = ArvoreAfunilada()
     splay.construir_de_ordenados([(1, None), (2, None), (3, None)])
@@ -171,7 +156,6 @@ def test_splay_zig_quando_alvo_e_filho_da_raiz():
     assert [p["caso"] for p in rastro.passos if p["passo"] == "caso"] == ["zig"]
     assert splay.raiz.chave == 1
 
-
 def test_splay_insercao_e_remocao_mudam_a_raiz():
     splay = ArvoreAfunilada()
     for c in [50, 20, 80, 10, 30]:
@@ -179,4 +163,4 @@ def test_splay_insercao_e_remocao_mudam_a_raiz():
         assert splay.raiz.chave == c
     assert splay.remover(20)
     assert 20 not in [c for c, _ in splay]
-    assert splay.raiz.chave == 10  # maior da subárvore esquerda de 20
+    assert splay.raiz.chave == 10

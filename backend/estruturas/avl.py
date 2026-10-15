@@ -1,30 +1,18 @@
-"""Árvore AVL (slides: Busca Hierárquica, parte 2).
-
-Árvore binária de busca na qual as alturas das duas subárvores de qualquer nó
-nunca diferem em mais de 1. O balanceamento de um nó é a altura da subárvore
-esquerda menos a da direita; após inserções e remoções, os nós no caminho
-inverso são rebalanceados pelos 4 casos (EE, ED, DD, DE).
-"""
-
 from .arvore_binaria import ArvoreBinariaBusca, NoArvore
 from .rastro import RASTRO_NULO, rotulo
-
 
 class NoAVL(NoArvore):
     __slots__ = ("altura",)
 
     def __init__(self, chave, valor):
         super().__init__(chave, valor)
-        self.altura = 1  # folha tem altura 1; subárvore vazia, 0
-
+        self.altura = 1
 
 def _altura(no):
     return no.altura if no is not None else 0
 
-
 def balanceamento(no):
     return _altura(no.esq) - _altura(no.dir)
-
 
 class ArvoreAVL(ArvoreBinariaBusca):
     def _novo_no(self, chave, valor):
@@ -34,7 +22,6 @@ class ArvoreAVL(ArvoreBinariaBusca):
         no.altura = 1 + max(_altura(no.esq), _altura(no.dir))
 
     def _balancear(self, no, rastro):
-        """Corrige o nó se ele estiver desbalanceado (|balanceamento| = 2)."""
         fb = balanceamento(no)
         if fb > 1:
             if balanceamento(no.esq) >= 0:
@@ -52,7 +39,6 @@ class ArvoreAVL(ArvoreBinariaBusca):
             return self._rotacao_esquerda(no, rastro)
         return no
 
-    # --------------------------------------------------------------- inserção
     def inserir(self, chave, valor, rastro=None):
         r = rastro or RASTRO_NULO
         self._inseriu = False
@@ -74,11 +60,10 @@ class ArvoreAVL(ArvoreBinariaBusca):
         else:
             rastro.registrar("compara", no=rotulo(no.chave), decisao="direita")
             no.dir = self._inserir(no.dir, chave, valor, rastro)
-        # Caminho inverso de inserção: atualiza a altura e rebalanceia.
+
         self._atualizar(no)
         return self._balancear(no, rastro)
 
-    # ---------------------------------------------------------------- remoção
     def remover(self, chave, rastro=None):
         r = rastro or RASTRO_NULO
         self._removeu = False
@@ -97,19 +82,19 @@ class ArvoreAVL(ArvoreBinariaBusca):
             rastro.registrar("compara", no=rotulo(no.chave), decisao="direita")
             no.dir = self._remover(no.dir, chave, rastro)
         elif no.esq is None or no.dir is None:
-            # Nenhum ou um filho: o filho ocupa o lugar do nó.
+
             self._removeu = True
             self.tamanho -= 1
             rastro.registrar("remove", no=rotulo(chave))
             return no.esq if no.esq is not None else no.dir
         else:
-            # Dois filhos: copia o sucessor e remove-o da subárvore direita.
+
             suc = no.dir
             while suc.esq is not None:
                 suc = suc.esq
             rastro.registrar("substitui", no=rotulo(no.chave), por=rotulo(suc.chave))
             no.chave, no.valor = suc.chave, suc.valor
             no.dir = self._remover(no.dir, suc.chave, rastro)
-        # O desbalanceamento pode se propagar até a raiz: verifica todos os ancestrais.
+
         self._atualizar(no)
         return self._balancear(no, rastro)

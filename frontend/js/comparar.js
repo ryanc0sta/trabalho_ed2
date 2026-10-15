@@ -1,6 +1,4 @@
-// Comparar jogadores: até três históricos no mesmo gráfico.
-// Cada histórico é uma árvore AVL; os percursos em ordem são intercalados numa
-// única linha do tempo, usada para achar as trocas de liderança.
+
 
 import { api } from "./api.js?v=7";
 import {
@@ -11,7 +9,7 @@ import {
 iniciarPagina();
 
 const MAXIMO = 3;
-const TRACOS = [[], [7, 4], [2, 3]]; // cada jogador com um traço: cheio, tracejado, pontilhado
+const TRACOS = [[], [7, 4], [2, 3]];
 let ids = (parametro("ids") || "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, MAXIMO);
 let grafico = null;
 let dados = null;
@@ -53,7 +51,7 @@ function renderizarEscolhidos() {
 
 function desenhar() {
   grafico?.destroy();
-  // Sem internet a biblioteca do gráfico não carrega: a página continua funcionando sem ele.
+
   if (typeof Chart === "undefined") {
     document.getElementById("grafico").parentElement.innerHTML = `<p class="vazio">O gráfico precisa de internet para aparecer. As trocas de liderança continuam abaixo.</p>`;
     return;

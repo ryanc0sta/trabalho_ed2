@@ -1,6 +1,4 @@
-// Página da liga. Ação principal: o filtro "Todos ↔ Só os destaques", que
-// percorre os níveis da lista com saltos (cada nível tem metade dos jogadores
-// do anterior — os mais valiosos, na versão modificada).
+
 
 import { api } from "./api.js?v=7";
 import {
@@ -20,12 +18,12 @@ const POR_PAGINA = 24;
 let detalhe = null;
 let nivel = 0;
 let pagina = 1;
-let alvoId = null; // jogador a destacar depois de "Ir para um nome"
+let alvoId = null;
 
-const niveisDoModo = () => detalhe.niveis; // níveis da lista com saltos (altura pelo valor de mercado)
+const niveisDoModo = () => detalhe.niveis;
 
 function nivelInicial() {
-  // O nível mais alto que ainda enche a primeira página.
+
   const niveis = niveisDoModo();
   for (let k = niveis.length - 1; k >= 0; k--) if (niveis[k].jogadores >= 12) return k;
   return 0;
@@ -77,9 +75,6 @@ function renderizarFiltro() {
   atualizarRotulo();
 }
 
-// "Ir para um nome": acha o primeiro jogador a partir do texto digitado e abre
-// a página em que ele está. Digitar letra a letra faz buscas vizinhas, e cada
-// uma parte de onde a anterior parou (busca dedilhada).
 let esperaIrPara = null;
 async function irPara(texto) {
   const aviso = document.getElementById("aviso-ir-para");
@@ -104,7 +99,7 @@ async function irPara(texto) {
     }
     aviso.textContent = `${achado.jogador.nome} · ${achado.posicao}º em ordem alfabética`;
     alvoId = achado.jogador.id;
-    nivel = 0; // a ordem alfabética completa é a do nível "Todos"
+    nivel = 0;
     pagina = achado.pagina;
     elFiltro.querySelector("#nivel").value = 0;
     atualizarRotulo();
@@ -127,11 +122,11 @@ function mudarNivel(novo) {
   pagina = 1;
   atualizarRotulo();
   clearTimeout(espera);
-  espera = setTimeout(() => carregarJogadores(true), 120); // o range dispara vários eventos ao arrastar
+  espera = setTimeout(() => carregarJogadores(true), 120);
 }
 
 let pedido = 0;
-/** `porUsuario`: veio de um gesto direto (filtro ou paginação), e não da abertura da página. */
+
 async function carregarJogadores(porUsuario = false) {
   const meu = ++pedido;
   [...elJogadores.children].forEach((c) => c.classList.add("sair"));
@@ -159,7 +154,7 @@ async function carregarJogadores(porUsuario = false) {
         ? `${detalhe.nome}: todos os jogadores, página ${dados.pagina}`
         : `${detalhe.nome}: vista do nível ${dados.nivel}`,
       rastro: dados.rastro,
-      // Num nível alto não há busca: o desenho mostra as torres que chegam até ele.
+
       cena: { torres: dados.jogadores.map((j) => ({ no: j.no, nivel: j.nivel })), nivel: dados.nivel },
       resultado: dados.nivel === 0
         ? (passosDaPagina ? `Chegou ao começo da página ${dados.pagina} em ${passosDaPagina} ${passosDaPagina === 1 ? "passo" : "passos"}.` : "")
@@ -193,7 +188,7 @@ async function iniciar() {
   }
   elJogadores.innerHTML = esqueletos(12);
   try {
-    // Abrir a página conta como uma visita à liga na lista autoorganizável.
+
     const [acesso, dados] = await Promise.all([api.acessarLiga(ligaId), api.liga(ligaId)]);
     detalhe = dados;
     const passo = acesso.rastro.passos.find((p) => ["avanca", "move_inicio"].includes(p.passo));
@@ -219,7 +214,6 @@ async function iniciar() {
   }
 }
 
-// Os extremos da liga: o mais velho, o mais jovem, o mais baixo e o mais alto.
 async function carregarRecordes() {
   const alvo = document.getElementById("recordes");
   try {
