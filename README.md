@@ -2,6 +2,12 @@
 
 Visualizador da base Transfermarkt para o trabalho de Estrutura de Dados e Algoritmos II.
 
+> **Nota para quem for avaliar.** O código-fonte não tem comentários nem docstrings internos.
+> Toda a documentação de cada estrutura — o que ela faz e, principalmente, o que foi **modificado**
+> em relação à versão clássica e por quê — está neste README, na seção
+> [Modificações (para a versão aplicada ao projeto)](#modificações-para-a-versão-aplicada-ao-projeto).
+> Por favor, leia essa seção antes de revisar o código.
+
 ## Como rodar
 
 **Você precisa de:** Python 3.10 ou mais novo, git e conexão com a internet (as fotos, os escudos, as
@@ -156,6 +162,76 @@ dois lados; por isso a ferramenta usa a binária e mostra a contagem da interpol
 | `avl_aumentada.py` | `avl.py` | Cada nó guarda o máximo da subárvore: pico de valor num período em θ(log n) |
 | `avl_ordem.py` | `avl.py` | Cada nó guarda o tamanho da subárvore: contar e paginar uma faixa de valor em θ(log n) |
 | `skiplist_valor.py` (busca dedilhada) | `skiplist.py` | `posicao_teto` parte de onde a busca anterior parou quando o alvo está perto |
+
+Detalhe de cada uma, com o problema que motivou a mudança:
+
+**Modificação 1 — Lista com movimentação ponderada** (`lista_ponderada.py`, lista das ligas).
+Na movimentação para o início clássica, um único acesso a uma liga pouco usada a joga para o topo,
+empurrando para baixo as ligas que o usuário realmente consulta sempre. A modificação dá a cada nó
+uma pontuação de interesse: cada acesso soma 1 à pontuação, e todas as pontuações "envelhecem" —
+são multiplicadas por `fator` a cada acesso feito na lista (acessos antigos pesam menos). Depois de
+encontrado, o nó avança só até passar os nós com pontuação menor que a sua, então a lista fica
+sempre ordenada pela pontuação: quem é acessado com frequência sobe e se mantém; um acesso isolado
+sobe pouco. O envelhecimento é preguiçoso: o nó guarda a pontuação e o instante (relógio da lista)
+em que ela foi atualizada; a pontuação atual é `pontuacao · fator^(relogio − instante)`. Como todos
+envelhecem na mesma taxa, a ordem relativa entre nós não acessados nunca muda, e por isso não é
+preciso percorrer a lista para envelhecer ninguém.
+
+**Modificação 2 — Lista com saltos com níveis por valor e larguras** (`skiplist_valor.py`,
+jogadores de uma liga). Problema da versão clássica: o nível de cada nó vem de lançamentos de
+moeda, então "olhar a liga por cima" (só os níveis altos) mostra jogadores aleatórios, não os mais
+valiosos. Duas mudanças:
+- **(a) nível pelo valor de mercado, não pela moeda** — a lista continua ordenada pelo **nome**,
+  mas o nível de cada jogador vem da sua posição no ranking de valor da liga: a metade mais
+  valiosa tem nível ≥ 1, o quarto mais valioso tem nível ≥ 2, o oitavo, nível ≥ 3, e assim por
+  diante (posição `r` → nível `⌊log₂(n/r)⌋`). Cada nível tem exatamente metade dos nós do nível de
+  baixo, como numa lista com saltos perfeita, e o nível mais alto mostra só as estrelas. Por que
+  ordenar pelo nome e não pelo valor? Se a lista estivesse ordenada pelo próprio valor, todos os
+  nós altos ficariam juntos no começo e, para achar um jogador barato, a busca percorreria quase
+  todo o nível 0: θ(n). Como nome e valor são independentes, os nós altos ficam espalhados pela
+  lista e a busca continua θ(log n) — sem precisar de moeda. Os limiares de valor de cada nível são
+  calculados na construção; jogadores inseridos depois recebem o nível pelo limiar que alcançam.
+- **(b) larguras nos ponteiros** — cada ponteiro guarda quantos nós do nível 0 ele salta. Somando
+  as larguras durante a descida, obtém-se a posição de um nó, e a descida inversa acha o nó de uma
+  posição — paginação ("página 30") em θ(log n), sem percorrer os nós anteriores. As larguras são
+  atualizadas na inserção e na remoção.
+
+**Modificação 3 — Árvore afunilada com afunilamento condicional** (`splay_condicional.py`, busca de
+jogadores). Problema da versão clássica: toda busca leva o nó à raiz. Um jogador consultado uma
+única vez (por curiosidade, ou por um clique errado) desaloja da raiz e dos níveis próximos os
+jogadores que são realmente procurados com frequência — e a seção "Em alta", que mostra o topo da
+árvore, fica instável. A modificação dá a cada nó um contador de acessos: a busca localiza o nó como
+numa árvore binária de busca comum, sem rotações, e soma 1 ao contador; só quando o contador atinge
+`limite` (K) o nó é afunilado até a raiz — e o contador volta a zero. Buscas malsucedidas não
+alteram a árvore. Inserção e remoção continuam como na árvore afunilada clássica.
+
+**Modificação 4 — AVL aumentada com o máximo da subárvore** (`avl_aumentada.py`, histórico de um
+jogador). Cada jogador tem uma AVL cujas chaves são as datas de avaliação e cujos valores são os
+valores de mercado. "Quanto ele valia em 01/2020?" já era uma busca de piso pela data; mas "qual foi
+o maior valor entre 2018 e 2022?" na AVL clássica exigiria visitar todas as datas do período: θ(k).
+A modificação faz cada nó guardar também `max_sub`, o maior valor de mercado da sua subárvore,
+recalculado sempre que os filhos de um nó mudam — na inserção, na remoção e em cada rotação (gancho
+`_atualizar`). Com isso, a consulta do pico usa subárvores inteiras sem entrar nelas e responde em
+θ(log n): só desce nos dois caminhos que delimitam o período.
+
+**Modificação 5 — AVL com o tamanho da subárvore** (`avl_ordem.py`, jogadores por valor de
+mercado). Perguntas da interface sobre faixas de valor como "quantos jogadores valem entre €10M e
+€20M?" ou "mostre a 3ª página dessa faixa" exigiriam, na AVL clássica, visitar todos os jogadores da
+faixa (θ(k)) ou percorrer as páginas anteriores. A modificação faz cada nó guardar `tam`, o número de
+nós da sua subárvore (atualizado no mesmo gancho `_atualizar`, portanto também em toda rotação). Com
+isso a árvore responde em θ(log n): `posicao(chave)` soma, ao descer para a direita, o nó e toda a
+sua subárvore esquerda de uma vez; `contar(de, ate)` é a diferença entre duas posições, sem visitar a
+faixa; `selecionar(k)` acha a k-ésima menor chave descendo pelo tamanho.
+
+**Modificação 6 — Busca dedilhada** (`skiplist_valor.py`, método `posicao_teto`, campo "Ir para um
+nome"). A posição de um nó já sai da soma das larguras em θ(log n) (modificação 2b). Além disso, a
+busca é **dedilhada**: guarda-se onde a busca anterior parou (o "dedo" — o último nó de cada nível)
+e, se a nova chave vier logo depois, a busca recomeça dali, subindo só os níveis necessários — útil
+porque o campo dispara uma busca a cada letra digitada, e cada letra cai perto da anterior. Partir do
+dedo custa cerca de 2·log(distância): compensa para alvos próximos, mas seria pior que partir da
+cabeça (log n) para alvos distantes. Por isso, antes de usar o dedo, uma única comparação no nível do
+meio decide: se o próximo nó desse nível já passa da chave, o alvo está perto; senão, a busca
+recomeça da cabeça.
 
 ## API (backend/api.py)
 
